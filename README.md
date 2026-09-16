@@ -163,6 +163,33 @@ datapalette --pipeline showcase --input-type single_image --input photo.jpg \
 | `Emboss` | `filters` | *(none)* |
 | `Sharpen` | `filters` | *(none)* |
 | `CustomKernel` | `filters` | `kernel: np.ndarray` |
+| `AspectResize` | `dataset` | `max_size: int = 256` |
+| `SquareCrop` | `dataset` | `h_align: str = "center"` (`left`/`center`/`right`), `v_align: str = "center"` (`top`/`center`/`bottom`) |
+| `SquarePad` | `dataset` | `border_type: str = "constant"` (`constant`/`reflect`/`replicate`), `fill: tuple = (0, 0, 0)` |
+| `ManySquares` | `dataset` | `ratio_threshold: float = 1.2` — multi-crop; returns a *list* |
+| `DominantColor` | `dataset` | `palette: dict \| None = None`, `n_clusters: int = 5` — returns a colour *name* |
+
+### GAN/diffusion dataset prep (`dataset` module)
+
+The `dataset` transforms port the image-op vocabulary from
+[`dvschultz/dataset-tools`](https://github.com/dvschultz/dataset-tools) — the
+standard StyleGAN-community prep toolkit — as clean, typed, sklearn-compatible
+transforms. The canonical pipeline turns arbitrary imagery into a square,
+fixed-size training set:
+
+```python
+from sklearn.pipeline import Pipeline
+from datapalette import AspectResize, SquareCrop  # or SquarePad to keep the whole frame
+
+prep = Pipeline([
+    ("resize", AspectResize(max_size=512)),  # longest side -> 512, aspect preserved
+    ("square", SquareCrop(h_align="center")),  # crop to 512x512, no distortion
+])
+```
+
+`ManySquares` multiplies dataset size by emitting top/bottom (or left/right)
+crops from tall/wide sources, and `DominantColor` labels each image with its
+nearest named colour (KMeans + CIELAB deltaE) for foldering a set by colour.
 
 ---
 

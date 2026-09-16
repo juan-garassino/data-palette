@@ -10,9 +10,11 @@ from datapalette.pipelines import (
     TaskPipeline,
 )
 from datapalette.transforms import (
+    AspectResize,
     BrightnessContrast,
     ConvertColorSpace,
     CustomKernel,
+    DominantColor,
     EdgeChannels,
     Emboss,
     EnhanceGreen,
@@ -20,6 +22,7 @@ from datapalette.transforms import (
     GaussianNoise,
     GradientChannels,
     ImageTransform,
+    ManySquares,
     Mirror,
     Multispectral,
     PCAColorAugmentation,
@@ -28,6 +31,8 @@ from datapalette.transforms import (
     Rotate,
     SaltPepperNoise,
     Sharpen,
+    SquareCrop,
+    SquarePad,
     Tile,
 )
 
@@ -53,6 +58,11 @@ __all__ = [
     "Emboss",
     "Sharpen",
     "CustomKernel",
+    "AspectResize",
+    "SquareCrop",
+    "SquarePad",
+    "ManySquares",
+    "DominantColor",
     # Pipelines
     "TaskPipeline",
     "GANPipeline",

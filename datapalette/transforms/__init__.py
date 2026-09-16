@@ -7,6 +7,13 @@ from datapalette.transforms.color import (
     Multispectral,
     PCAColorAugmentation,
 )
+from datapalette.transforms.dataset import (
+    AspectResize,
+    DominantColor,
+    ManySquares,
+    SquareCrop,
+    SquarePad,
+)
 from datapalette.transforms.edges import EdgeChannels, GradientChannels
 from datapalette.transforms.filters import CustomKernel, Emboss, Sharpen
 from datapalette.transforms.frequency import FourierTransform
@@ -33,4 +40,9 @@ __all__ = [
     "Emboss",
     "Sharpen",
     "CustomKernel",
+    "AspectResize",
+    "SquareCrop",
+    "SquarePad",
+    "ManySquares",
+    "DominantColor",
 ]
