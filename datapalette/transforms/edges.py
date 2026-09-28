@@ -3,16 +3,28 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
-from datapalette.transforms.base import ImageTransform, minmax_to_uint8
+from datapalette.transforms.base import (
+    ImageTransform,
+    minmax_to_uint8,
+    n_channels,
+    require_channels,
+)
 
 __all__ = ["GradientChannels", "EdgeChannels"]
+
+
+def _to_gray(image: np.ndarray, name: str) -> np.ndarray:
+    require_channels(image, (1, 3), name)
+    if n_channels(image) == 3:
+        return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    return image if image.ndim == 2 else image[:, :, 0]
 
 
 class GradientChannels(ImageTransform):
     """Compute Sobel gradient magnitude and direction as a 2-channel image."""
 
     def _apply(self, image: np.ndarray) -> np.ndarray:
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if image.ndim == 3 else image
+        gray = _to_gray(image, type(self).__name__)
 
         grad_x = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
         grad_y = cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
@@ -42,7 +54,7 @@ class EdgeChannels(ImageTransform):
         self.high_threshold = high_threshold
 
     def _apply(self, image: np.ndarray) -> np.ndarray:
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if image.ndim == 3 else image
+        gray = _to_gray(image, type(self).__name__)
 
         edges = cv2.Canny(gray, self.low_threshold, self.high_threshold)
         laplacian = np.uint8(np.absolute(cv2.Laplacian(gray, cv2.CV_64F)))

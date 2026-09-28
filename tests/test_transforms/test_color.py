@@ -28,12 +28,12 @@ class TestPCAColorAugmentation:
         for r in results:
             assert r.shape == sample_image.shape
 
-    def test_auto_fit_on_transform(self, sample_image):
-        """When transform is called without fit, it should auto-fit."""
+    def test_transform_without_fit_uses_per_image_stats(self, sample_image):
+        """Without fit, each image uses its own colour axes and nothing is stored."""
         t = PCAColorAugmentation(alpha_std=0.1)
         result = t.transform(sample_image)
         assert result.shape == sample_image.shape
-        assert t.eigvals_ is not None
+        assert not hasattr(t, "eigvals_")
 
 
 class TestConvertColorSpace:

@@ -15,6 +15,15 @@ logger = logging.getLogger(__name__)
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif")
 
 
+def list_images(directory: str) -> List[str]:
+    """Sorted paths of the image files directly inside ``directory``."""
+    return sorted(
+        os.path.join(directory, f)
+        for f in os.listdir(directory)
+        if f.lower().endswith(IMAGE_EXTENSIONS)
+    )
+
+
 def load_image(path: str) -> np.ndarray:
     """Load an image from disk as a BGR numpy array.
 

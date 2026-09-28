@@ -9,11 +9,11 @@ from datapalette.transforms.base import Compose, ImageTransform
 
 def test_get_and_set_params():
     t = Rotate(angle=15)
-    assert t.get_params() == {"angle": 15}
+    assert t.get_params() == {"angle": 15, "expand": False, "interpolation": "linear"}
     assert t.set_params(angle=30) is t and t.angle == 30
     with pytest.raises(ValueError):
         t.set_params(nope=1)
-    assert repr(t) == "Rotate(angle=30)"
+    assert repr(t) == "Rotate(angle=30, expand=False, interpolation='linear')"
 
 
 def test_transform_is_callable_and_handles_lists(sample_image):

@@ -8,8 +8,6 @@ import numpy as np
 
 __all__ = ["DataPaletteDataset"]
 
-IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif")
-
 
 class DataPaletteDataset:
     """PyTorch Dataset adapter for DataPalette pipelines.
@@ -40,9 +38,9 @@ class DataPaletteDataset:
         self.masks_dir = masks_dir
         self.transform = transform
 
-        self._image_files = sorted(
-            f for f in os.listdir(images_dir) if f.lower().endswith(IMAGE_EXTENSIONS)
-        )
+        from datapalette.io.batch import list_images
+
+        self._image_files = [os.path.basename(p) for p in list_images(images_dir)]
 
     def __len__(self) -> int:
         return len(self._image_files)

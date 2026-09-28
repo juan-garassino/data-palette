@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 
 from datapalette.pipelines.base import TaskPipeline
+from datapalette.transforms.base import Compose
 from datapalette.transforms.spatial import Mirror, Resize, Rotate
 
 __all__ = ["SegmentationPipeline"]
@@ -43,6 +44,14 @@ class SegmentationPipeline(TaskPipeline):
             ("mirror", Mirror(mode="horizontal")),
         ]
         super().__init__(steps=steps, dataset=dataset)
+        # same geometry for masks, but nearest-neighbour so label values survive
+        self.mask_transforms = Compose(
+            [
+                ("resize", Resize(size=size, interpolation="nearest")),
+                ("rotate", Rotate(angle=90.0, interpolation="nearest")),
+                ("mirror", Mirror(mode="horizontal")),
+            ]
+        )
         self.mode = mode
         self.size = size
 
@@ -70,7 +79,7 @@ class SegmentationPipeline(TaskPipeline):
             images = self.load_images(images_dir)
             if masks_dir is None:
                 raise ValueError("masks_dir is required when using custom images.")
-            masks = self.load_images(masks_dir)
+            masks = self.load_masks(masks_dir)
         else:
             data, labels = self._load_dataset()
             images_raw = data[:, :, :, 0] if data.ndim == 4 else data
@@ -88,16 +97,22 @@ class SegmentationPipeline(TaskPipeline):
             elif self.mode == "instance":
                 comp, inst = make_instance_masks(images_raw, labels, canvas_size=self.size)
                 # For instance mode, composites are the images
-                images_list = [cv2.cvtColor(img, cv2.COLOR_GRAY2BGR) for img in comp[:, :, :, 0]]
-                masks_list = [m for m in inst[:, :, :, 0]]
-                return images_list, masks_list
+                images = [cv2.cvtColor(img, cv2.COLOR_GRAY2BGR) for img in comp[:, :, :, 0]]
+                masks = [m for m in inst[:, :, :, 0]]
+                return self.transform_images(images), self.transform_masks(masks)
             else:
                 raise ValueError(f"Unknown mode '{self.mode}'")
 
             images = [cv2.cvtColor(img, cv2.COLOR_GRAY2BGR) for img in images_raw]
             masks = [m for m in mask_arr[:, :, :, 0]]
 
-        # Apply same spatial transforms to images and masks
-        X = self.transform_images(images)
-        y = self.transform_images(masks)
-        return X, y
+        return self.transform_images(images), self.transform_masks(masks)
+
+    def load_masks(self, masks_dir: str) -> List[np.ndarray]:
+        """Read label masks unchanged (single channel, original integer values)."""
+        from datapalette.io.batch import list_images
+
+        return [cv2.imread(path, cv2.IMREAD_UNCHANGED) for path in list_images(masks_dir)]
+
+    def transform_masks(self, masks: List[np.ndarray]) -> List[np.ndarray]:
+        return self.mask_transforms.transform(masks)  # type: ignore[return-value]

@@ -57,13 +57,10 @@ class TaskPipeline:
         return loader(train=True)
 
     def load_images(self, images_dir: str) -> List[np.ndarray]:
-        """Load all images from a directory."""
-        import os
+        """Load all images in a directory (sorted by filename)."""
+        from datapalette.io.batch import list_images, load_image
 
-        from datapalette.io.batch import IMAGE_EXTENSIONS, load_image
-
-        files = sorted(f for f in os.listdir(images_dir) if f.lower().endswith(IMAGE_EXTENSIONS))
-        return [load_image(os.path.join(images_dir, f)) for f in files]
+        return [load_image(path) for path in list_images(images_dir)]
 
     def transform_images(self, images: List[np.ndarray]) -> List[np.ndarray]:
         """Apply the configured transforms to a list of images."""

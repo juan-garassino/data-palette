@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Optional
 
 import cv2
 import numpy as np
 
-from datapalette.transforms.base import ImageTransform
+from datapalette.transforms.base import ImageTransform, require_channels
 
 __all__ = ["PCAColorAugmentation", "ConvertColorSpace", "EnhanceGreen", "Multispectral"]
 
@@ -16,54 +16,51 @@ logger = logging.getLogger(__name__)
 class PCAColorAugmentation(ImageTransform):
     """PCA-based color augmentation (AlexNet-style).
 
-    This is a *stateful* transform: ``fit`` computes eigen-decomposition on the
-    provided images, and ``transform`` applies random perturbations along the
-    principal colour axes.
+    ``fit`` learns the colour statistics of a dataset (AlexNet computes them over all of
+    ImageNet); ``transform`` then shifts each image along those principal colour axes.
+    Without ``fit``, each image is perturbed along its *own* principal axes, and nothing
+    is stored on the transform.
 
     Parameters
     ----------
     alpha_std : float
         Standard deviation used to sample perturbation magnitudes. Default ``0.1``.
+    random_state : int or None
+        Seed for reproducible perturbations. Default ``None``.
     """
 
-    def __init__(self, alpha_std: float = 0.1):
+    def __init__(self, alpha_std: float = 0.1, random_state: Optional[int] = None):
         self.alpha_std = alpha_std
-        self.eigvals_: np.ndarray | None = None
-        self.eigvecs_: np.ndarray | None = None
-        self.mean_: np.ndarray | None = None
-        self.std_: np.ndarray | None = None
+        self.random_state = random_state
+
+    @staticmethod
+    def _stats(pixels: np.ndarray):
+        mean = pixels.mean(axis=0)
+        std = pixels.std(axis=0)
+        std[std == 0] = 1.0
+        cov = np.cov((pixels - mean) / std, rowvar=False) + np.eye(3) * 1e-6
+        eigvals, eigvecs = np.linalg.eigh(cov)
+        return mean, std, eigvals, eigvecs
 
     def fit(self, X: Any, y: Any = None) -> PCAColorAugmentation:
-        """Compute eigen-decomposition from a set of images."""
-        if isinstance(X, np.ndarray) and X.ndim == 3:
-            pixels = X.reshape(-1, 3).astype(np.float32)
-        else:
-            pixels = np.vstack([img.reshape(-1, 3) for img in X]).astype(np.float32)
-
-        self.mean_ = pixels.mean(axis=0)
-        self.std_ = pixels.std(axis=0)
-        self.std_[self.std_ == 0] = 1.0
-
-        normed = (pixels - self.mean_) / self.std_
-        cov = np.cov(normed, rowvar=False) + np.eye(3) * 1e-6
-        self.eigvals_, self.eigvecs_ = np.linalg.eigh(cov)
+        """Learn colour statistics from one image or a list of images."""
+        images = [X] if isinstance(X, np.ndarray) and X.ndim == 3 else list(X)
+        for img in images:
+            require_channels(img, (3,), type(self).__name__)
+        pixels = np.vstack([img.reshape(-1, 3) for img in images]).astype(np.float32)
+        self.mean_, self.std_, self.eigvals_, self.eigvecs_ = self._stats(pixels)
         return self
 
     def _apply(self, image: np.ndarray) -> np.ndarray:
-        if self.eigvals_ is None:
-            # Fall back: fit on this single image
-            self.fit(image)
-
-        assert self.eigvals_ is not None
-        assert self.eigvecs_ is not None
-        assert self.mean_ is not None
-        assert self.std_ is not None
-
+        require_channels(image, (3,), type(self).__name__)
         pixels = image.reshape(-1, 3).astype(np.float32)
-        normed = (pixels - self.mean_) / self.std_
-        alphas = np.random.normal(0, self.alpha_std, 3)
-        delta = self.eigvecs_.dot(alphas * self.eigvals_)
-        result = (normed + delta) * self.std_ + self.mean_
+        if hasattr(self, "eigvals_"):
+            mean, std, eigvals, eigvecs = self.mean_, self.std_, self.eigvals_, self.eigvecs_
+        else:
+            mean, std, eigvals, eigvecs = self._stats(pixels)
+        alphas = self._random().normal(0, self.alpha_std, 3)
+        delta = eigvecs.dot(alphas * eigvals)
+        result = ((pixels - mean) / std + delta) * std + mean
         return np.clip(result, 0, 255).reshape(image.shape).astype(np.uint8)
 
 
@@ -86,6 +83,7 @@ class ConvertColorSpace(ImageTransform):
         self.target = target
 
     def _apply(self, image: np.ndarray) -> np.ndarray:
+        require_channels(image, (3,), type(self).__name__)
         code = self._CODES.get(self.target)
         if code is None:
             raise ValueError(f"Unknown target '{self.target}'. Choose from {list(self._CODES)}")
@@ -99,6 +97,7 @@ class EnhanceGreen(ImageTransform):
     """Enhance the green channel using CLAHE."""
 
     def _apply(self, image: np.ndarray) -> np.ndarray:
+        require_channels(image, (3,), type(self).__name__)
         b, g, r = cv2.split(image)
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
         g_enhanced = clahe.apply(g)
@@ -112,6 +111,7 @@ class Multispectral(ImageTransform):
     """
 
     def _apply(self, image: np.ndarray) -> np.ndarray:
+        require_channels(image, (3,), type(self).__name__)
         b, g, r = cv2.split(image)
         yellow = cv2.addWeighted(g, 0.5, r, 0.5, 0)
         cyan = cv2.addWeighted(b, 0.5, g, 0.5, 0)

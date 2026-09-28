@@ -1,13 +1,40 @@
 from __future__ import annotations
 
 import inspect
-from typing import Any, Iterable, List, Sequence, Tuple, Union
+from typing import Any, Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
-__all__ = ["ImageTransform", "Compose", "minmax_to_uint8"]
+__all__ = ["ImageTransform", "Compose", "minmax_to_uint8", "INTERPOLATION"]
 
 Images = Union[np.ndarray, List[np.ndarray]]
+
+INTERPOLATION = {"nearest": 0, "linear": 1, "cubic": 2, "area": 3}  # cv2.INTER_* values
+
+
+def interpolation_flag(name: str) -> int:
+    if name not in INTERPOLATION:
+        raise ValueError(f"Unknown interpolation {name!r}. Choose from {list(INTERPOLATION)}")
+    return INTERPOLATION[name]
+
+
+def keep_channel_axis(original: np.ndarray, result: np.ndarray) -> np.ndarray:
+    """OpenCV drops a trailing singleton channel; put it back."""
+    if original.ndim == 3 and result.ndim == 2:
+        return result[:, :, np.newaxis]
+    return result
+
+
+def n_channels(image: np.ndarray) -> int:
+    return 1 if image.ndim == 2 else int(image.shape[2])
+
+
+def require_channels(image: np.ndarray, allowed: Tuple[int, ...], name: str) -> None:
+    if n_channels(image) not in allowed:
+        raise ValueError(
+            f"{name} expects an image with {' or '.join(map(str, allowed))} channel(s), "
+            f"got shape {image.shape}"
+        )
 
 
 class ImageTransform:
@@ -21,6 +48,9 @@ class ImageTransform:
     (``get_params``/``set_params``/``fit``/``transform``/``fit_transform`` plus sklearn's
     tag and fitted hooks), so transforms still work inside ``sklearn.pipeline.Pipeline``.
     """
+
+    _rng: np.random.Generator
+    _rng_seed: Optional[int]
 
     # -- parameters -----------------------------------------------------------------
     @classmethod
@@ -66,6 +96,14 @@ class ImageTransform:
     def _apply(self, image: np.ndarray) -> np.ndarray:
         """Transform a single image. Must be overridden by subclasses."""
         raise NotImplementedError
+
+    def _random(self) -> np.random.Generator:
+        """Generator seeded from ``self.random_state``; re-seeded if that parameter changes."""
+        seed = getattr(self, "random_state", None)
+        if not hasattr(self, "_rng") or self._rng_seed != seed:
+            self._rng = np.random.default_rng(seed)
+            self._rng_seed = seed
+        return self._rng
 
     # -- scikit-learn interop (only called when sklearn is installed) -----------------
     def __sklearn_is_fitted__(self) -> bool:
