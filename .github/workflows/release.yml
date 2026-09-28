@@ -1,0 +1,49 @@
+name: release
+
+# Tag vX.Y.ZrcN -> TestPyPI, tag vX.Y.Z -> PyPI. Trusted publishing (OIDC): no API tokens.
+# One-time setup on pypi.org and test.pypi.org: add a pending publisher for project
+# `datapalette`, owner juan-garassino, repo data-palette, workflow release.yml, environment pypi.
+on:
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - name: Tag matches package version
+        run: |
+          version=$(uv run --no-project python -c "import re;print(re.search(r'__version__ = \"(.+)\"', open('datapalette/__init__.py').read())[1])")
+          test "v$version" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} != v$version"; exit 1; }
+      - run: uv build
+      - run: uvx twine check dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi  # add Juan as a required reviewer in the repo settings
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Publish to TestPyPI (release candidates)
+        if: contains(github.ref_name, 'rc')
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+      - name: Publish to PyPI
+        if: ${{ !contains(github.ref_name, 'rc') }}
+        uses: pypa/gh-action-pypi-publish@release/v1

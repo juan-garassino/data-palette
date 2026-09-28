@@ -126,3 +126,13 @@ def test_run_segmentation_writes_masks(images_dir, tmp_path):
     )
     mask = cv2.imread(str(next((out / "masks").glob("*.png"))), cv2.IMREAD_UNCHANGED)
     assert set(np.unique(mask)) <= {0, 1}
+
+
+def test_example_scripts_run(images_dir, tmp_path):
+    import runpy
+
+    root = Path(__file__).parents[1] / "examples"
+    out = tmp_path / "aug"
+    sys.argv = ["augment_folder.py", str(images_dir), str(out)]
+    runpy.run_path(str(root / "augment_folder.py"), run_name="__main__")
+    assert len(list(out.glob("*.png"))) == 3
