@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datapalette.transforms.base import ImageTransform
+from datapalette.transforms.base import Compose, ImageTransform
 from datapalette.transforms.color import (
     ConvertColorSpace,
     EnhanceGreen,
@@ -22,6 +22,8 @@ from datapalette.transforms.spatial import Mirror, RandomCrop, Resize, Rotate, T
 
 __all__ = [
     "ImageTransform",
+    "Compose",
+    "REGISTRY",
     "Rotate",
     "Mirror",
     "RandomCrop",
@@ -46,3 +48,10 @@ __all__ = [
     "ManySquares",
     "DominantColor",
 ]
+
+#: Transform classes by name, for the CLI and config files.
+REGISTRY = {
+    name: obj
+    for name, obj in sorted(globals().items())
+    if isinstance(obj, type) and issubclass(obj, ImageTransform) and obj not in (ImageTransform, Compose)
+}

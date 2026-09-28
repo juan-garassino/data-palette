@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Callable, List
+from typing import Callable, List, Union
 
 import cv2
 import numpy as np
-from tqdm import tqdm
 
 __all__ = ["load_image", "save_image", "process_directory"]
 
@@ -18,9 +17,7 @@ IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif")
 def list_images(directory: str) -> List[str]:
     """Sorted paths of the image files directly inside ``directory``."""
     return sorted(
-        os.path.join(directory, f)
-        for f in os.listdir(directory)
-        if f.lower().endswith(IMAGE_EXTENSIONS)
+        os.path.join(directory, f) for f in os.listdir(directory) if f.lower().endswith(IMAGE_EXTENSIONS)
     )
 
 
@@ -69,27 +66,14 @@ def save_image(path: str, image: np.ndarray) -> None:
 def process_directory(
     input_dir: str,
     output_dir: str,
-    process_func: Callable[[np.ndarray], np.ndarray],
-    batch_size: int = 32,
+    process_func: Callable[[np.ndarray], Union[np.ndarray, List[np.ndarray]]],
     output_format: str = "png",
-    desc: str = "Processing images",
+    log_every: int = 100,
 ) -> List[str]:
     """Apply *process_func* to every image in *input_dir* and write results to *output_dir*.
 
-    Parameters
-    ----------
-    input_dir : str
-        Source directory containing images.
-    output_dir : str
-        Destination directory for processed images.
-    process_func : callable
-        ``(np.ndarray) -> np.ndarray`` applied to each image.
-    batch_size : int
-        Cosmetic batch size for the progress bar.
-    output_format : str
-        Output file extension (without dot). Default ``'png'``.
-    desc : str
-        Progress bar description.
+    A function that returns a list (e.g. ``Tile``) writes one file per output,
+    suffixed ``_000``, ``_001``, ...
 
     Returns
     -------
@@ -97,20 +81,37 @@ def process_directory(
         Paths to the saved output images.
     """
     os.makedirs(output_dir, exist_ok=True)
-    image_files = sorted(f for f in os.listdir(input_dir) if f.lower().endswith(IMAGE_EXTENSIONS))
-
+    paths = list_images(input_dir)
     saved: List[str] = []
-    for i in tqdm(range(0, len(image_files), batch_size), desc=desc, unit="batch"):
-        batch = image_files[i : i + batch_size]
-        for img_file in batch:
-            img = cv2.imread(os.path.join(input_dir, img_file))
-            if img is None:
-                logger.warning("Skipping unreadable file: %s", img_file)
-                continue
-            processed = process_func(img)
-            out_name = f"{os.path.splitext(img_file)[0]}.{output_format}"
-            out_path = os.path.join(output_dir, out_name)
-            cv2.imwrite(out_path, processed)
-            saved.append(out_path)
-
+    for n, path in enumerate(paths, start=1):
+        img = cv2.imread(path)
+        if img is None:
+            logger.warning("Skipping unreadable file: %s", path)
+            continue
+        stem = os.path.splitext(os.path.basename(path))[0]
+        saved.extend(write_outputs(process_func(img), output_dir, stem, output_format))
+        if n % log_every == 0:
+            logger.info("processed %d/%d images", n, len(paths))
     return saved
+
+
+def write_outputs(
+    result: Union[np.ndarray, List[np.ndarray]],
+    output_dir: str,
+    stem: str,
+    output_format: str = "png",
+) -> List[str]:
+    """Write one image, or a list of images with numbered suffixes, and return the paths."""
+    if isinstance(result, np.ndarray):
+        items, names = [result], [stem]
+    elif isinstance(result, list) and all(isinstance(r, np.ndarray) for r in result):
+        items, names = result, [f"{stem}_{k:03d}" for k in range(len(result))]
+    else:
+        raise TypeError(f"expected an image or a list of images, got {type(result).__name__}")
+    os.makedirs(output_dir, exist_ok=True)
+    paths = []
+    for image, name in zip(items, names):
+        out = os.path.join(output_dir, f"{name}.{output_format}")
+        cv2.imwrite(out, image)
+        paths.append(out)
+    return paths

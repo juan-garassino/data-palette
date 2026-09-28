@@ -50,8 +50,7 @@ class DataPaletteDataset:
             import torch
         except ImportError as e:
             raise ImportError(
-                "torch is required for DataPaletteDataset. "
-                "Install with: pip install datapalette[torch]"
+                "torch is required for DataPaletteDataset. Install with: pip install datapalette[torch]"
             ) from e
 
         img_path = os.path.join(self.images_dir, self._image_files[idx])

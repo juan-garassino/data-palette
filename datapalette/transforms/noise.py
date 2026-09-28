@@ -44,9 +44,7 @@ class SaltPepperNoise(ImageTransform):
         Seed for reproducible noise. Default ``None``.
     """
 
-    def __init__(
-        self, amount: float = 0.05, salt_ratio: float = 0.5, random_state: Optional[int] = None
-    ):
+    def __init__(self, amount: float = 0.05, salt_ratio: float = 0.5, random_state: Optional[int] = None):
         self.amount = amount
         self.salt_ratio = salt_ratio
         self.random_state = random_state

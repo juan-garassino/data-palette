@@ -154,6 +154,4 @@ class Resize(ImageTransform):
 
     def _apply(self, image: np.ndarray) -> np.ndarray:
         flag = interpolation_flag(self.interpolation)
-        return keep_channel_axis(
-            image, cv2.resize(image, (self.size[1], self.size[0]), interpolation=flag)
-        )
+        return keep_channel_axis(image, cv2.resize(image, (self.size[1], self.size[0]), interpolation=flag))

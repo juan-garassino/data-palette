@@ -44,9 +44,7 @@ class TestMakeInstanceMasks:
     def test_output_shapes(self):
         images = np.random.randint(0, 255, (9, 28, 28), dtype=np.uint8)
         labels = np.arange(9, dtype=np.int64)
-        composites, instance_masks = make_instance_masks(
-            images, labels, n_per_image=3, canvas_size=(64, 64)
-        )
+        composites, instance_masks = make_instance_masks(images, labels, n_per_image=3, canvas_size=(64, 64))
         # 9 images / 3 per composite = 3 composites
         assert composites.shape == (3, 64, 64, 1)
         assert instance_masks.shape == (3, 64, 64, 1)

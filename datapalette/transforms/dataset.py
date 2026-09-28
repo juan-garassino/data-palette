@@ -88,13 +88,9 @@ class SquareCrop(ImageTransform):
 
     def _apply(self, image: np.ndarray) -> np.ndarray:
         if self.h_align not in self._H_ALIGN:
-            raise ValueError(
-                f"Invalid h_align '{self.h_align}'. Choose from {sorted(self._H_ALIGN)}"
-            )
+            raise ValueError(f"Invalid h_align '{self.h_align}'. Choose from {sorted(self._H_ALIGN)}")
         if self.v_align not in self._V_ALIGN:
-            raise ValueError(
-                f"Invalid v_align '{self.v_align}'. Choose from {sorted(self._V_ALIGN)}"
-            )
+            raise ValueError(f"Invalid v_align '{self.v_align}'. Choose from {sorted(self._V_ALIGN)}")
 
         h, w = image.shape[:2]
         if w > h:
@@ -148,9 +144,7 @@ class SquarePad(ImageTransform):
     def _apply(self, image: np.ndarray) -> np.ndarray:
         border = self._BORDERS.get(self.border_type)
         if border is None:
-            raise ValueError(
-                f"Invalid border_type '{self.border_type}'. Choose from {sorted(self._BORDERS)}"
-            )
+            raise ValueError(f"Invalid border_type '{self.border_type}'. Choose from {sorted(self._BORDERS)}")
 
         h, w = image.shape[:2]
         if h == w:

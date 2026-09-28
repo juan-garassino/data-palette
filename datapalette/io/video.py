@@ -6,7 +6,6 @@ from typing import Optional, Tuple
 
 import cv2
 import numpy as np
-from tqdm import tqdm
 
 __all__ = ["extract_frames", "n_croppings_from_frame"]
 
@@ -30,7 +29,7 @@ def extract_frames(
     fps : int
         Target frames per second. Default ``1``.
     output_size : tuple[int, int] or None
-        Optional ``(width, height)`` to resize each frame.
+        Optional ``(height, width)`` to resize each frame.
 
     Returns
     -------
@@ -41,24 +40,20 @@ def extract_frames(
     cap = cv2.VideoCapture(video_path)
     video_fps = int(cap.get(cv2.CAP_PROP_FPS)) or 30
     frame_interval = max(1, int(video_fps / fps))
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
     frame_count = 0
     saved_count = 0
-
-    with tqdm(total=total_frames, desc="Extracting frames", unit="frame") as pbar:
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
-            if frame_count % frame_interval == 0:
-                if output_size:
-                    frame = cv2.resize(frame, output_size)
-                path = os.path.join(output_dir, f"frame_{saved_count:06d}.png")
-                cv2.imwrite(path, frame)
-                saved_count += 1
-            frame_count += 1
-            pbar.update(1)
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        if frame_count % frame_interval == 0:
+            if output_size:
+                frame = cv2.resize(frame, (output_size[1], output_size[0]))
+            path = os.path.join(output_dir, f"frame_{saved_count:06d}.png")
+            cv2.imwrite(path, frame)
+            saved_count += 1
+        frame_count += 1
 
     cap.release()
     logger.info("Extracted %d frames from %s", saved_count, video_path)
@@ -70,6 +65,7 @@ def n_croppings_from_frame(
     output_dir: str,
     num_crops: int,
     crop_size: Tuple[int, int],
+    random_state: Optional[int] = None,
 ) -> list[str]:
     """Generate *num_crops* random crops from a single image.
 
@@ -82,7 +78,9 @@ def n_croppings_from_frame(
     num_crops : int
         Number of random crops to create.
     crop_size : tuple[int, int]
-        ``(width, height)`` of each crop.
+        ``(height, width)`` of each crop.
+    random_state : int or None
+        Seed for reproducible crops.
 
     Returns
     -------
@@ -95,14 +93,13 @@ def n_croppings_from_frame(
         raise ValueError(f"Could not read image: {input_frame}")
 
     h, w = frame.shape[:2]
-    cw, ch = crop_size
+    ch, cw = crop_size
+    rng = np.random.default_rng(random_state)
     paths: list[str] = []
 
     for i in range(num_crops):
-        max_x = max(0, w - cw)
-        max_y = max(0, h - ch)
-        x = np.random.randint(0, max_x + 1)
-        y = np.random.randint(0, max_y + 1)
+        x = int(rng.integers(0, max(0, w - cw) + 1))
+        y = int(rng.integers(0, max(0, h - ch) + 1))
         crop = frame[y : y + ch, x : x + cw]
         if crop.shape[0] != ch or crop.shape[1] != cw:
             crop = cv2.resize(crop, (cw, ch))

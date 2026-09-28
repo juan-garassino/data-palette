@@ -12,6 +12,7 @@ from datapalette.pipelines import (
 from datapalette.transforms import (
     AspectResize,
     BrightnessContrast,
+    Compose,
     ConvertColorSpace,
     CustomKernel,
     DominantColor,
@@ -40,6 +41,7 @@ __all__ = [
     "__version__",
     # Transforms
     "ImageTransform",
+    "Compose",
     "Rotate",
     "Mirror",
     "RandomCrop",

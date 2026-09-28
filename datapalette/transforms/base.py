@@ -133,9 +133,7 @@ class Compose(ImageTransform):
     def named_steps(self) -> dict:
         out = {}
         for i, step in enumerate(self.steps):
-            name, t = (
-                step if isinstance(step, tuple) else (f"{type(step).__name__.lower()}_{i}", step)
-            )
+            name, t = step if isinstance(step, tuple) else (f"{type(step).__name__.lower()}_{i}", step)
             out[name] = t
         return out
 

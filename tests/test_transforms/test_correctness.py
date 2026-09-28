@@ -69,9 +69,7 @@ def test_pca_rejects_non_rgb():
         PCAColorAugmentation().transform(np.zeros((8, 8), dtype=np.uint8))
 
 
-@pytest.mark.parametrize(
-    "t", [Resize((16, 12)), Rotate(30), Mirror(), RandomCrop((5, 5), random_state=0)]
-)
+@pytest.mark.parametrize("t", [Resize((16, 12)), Rotate(30), Mirror(), RandomCrop((5, 5), random_state=0)])
 def test_single_channel_images_keep_their_shape(t):
     two_d = np.random.randint(0, 255, (20, 24), dtype=np.uint8)
     one_ch = two_d[:, :, None]

@@ -1,255 +1,195 @@
+"""datapalette command line: apply transform chains, run task pipelines, list transforms."""
+
 from __future__ import annotations
 
 import argparse
+import ast
 import logging
 import os
-from typing import Any, List, Tuple, cast
+import sys
+from typing import Any, Dict, List, Optional, Sequence
 
 import cv2
-import numpy as np
 
-from datapalette.io.batch import process_directory
-from datapalette.io.video import extract_frames
-from datapalette.pipelines import DiffusionPipeline, GANPipeline, SegmentationPipeline
-from datapalette.transforms import (
-    BrightnessContrast,
-    ConvertColorSpace,
-    EdgeChannels,
-    Emboss,
-    EnhanceGreen,
-    FourierTransform,
-    GaussianNoise,
-    GradientChannels,
-    Mirror,
-    Multispectral,
-    PCAColorAugmentation,
-    RandomCrop,
-    Rotate,
-    SaltPepperNoise,
-    Sharpen,
-    Tile,
-)
-from datapalette.utils.config import load_config
-from datapalette.utils.logging import setup_logging
+from datapalette import __version__
+from datapalette.transforms import REGISTRY, Compose, ImageTransform
 
-__all__ = ["main"]
+__all__ = ["main", "parse_step", "build_parser"]
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_INPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
-DEFAULT_OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "results")
+
+def parse_step(spec: str) -> ImageTransform:
+    """``"Resize(size=(64, 64))"`` or ``"Mirror"`` -> a transform instance.
+
+    Parsed with :mod:`ast` and ``literal_eval`` — keyword arguments must be literals,
+    nothing is ever evaluated.
+    """
+    try:
+        node = ast.parse(spec.strip(), mode="eval").body
+    except SyntaxError as e:
+        raise ValueError(f"cannot parse step {spec!r}") from e
+    if isinstance(node, ast.Name):
+        name, kwargs = node.id, {}
+    elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and not node.args:
+        name = node.func.id
+        try:
+            kwargs = {kw.arg: ast.literal_eval(kw.value) for kw in node.keywords if kw.arg}
+        except ValueError as e:
+            raise ValueError(f"step {spec!r}: arguments must be literals") from e
+    else:
+        raise ValueError(f"step {spec!r}: expected Name or Name(key=value, ...)")
+    return build_step(name, kwargs)
 
 
-def _showcase_pipeline(input_image: str, output_dir: str, steps: List[Tuple[str, Any]]) -> None:
-    """Process a single image through all steps, saving each intermediate result."""
-    os.makedirs(output_dir, exist_ok=True)
-    img = cv2.imread(input_image)
-    if img is None:
-        raise ValueError(f"Cannot read image: {input_image}")
-
-    for i, (step_name, transform) in enumerate(steps):
-        logger.info("Applying step %d/%d: %s", i + 1, len(steps), step_name)
-        img = transform.transform(img)
-        out_path = os.path.join(output_dir, f"{i + 1:02d}_{step_name}.png")
-        cv2.imwrite(out_path, img)
+def build_step(name: str, params: Dict[str, Any]) -> ImageTransform:
+    if name not in REGISTRY:
+        raise ValueError(f"unknown transform {name!r}; see `datapalette list-transforms`")
+    params = {k: tuple(v) if isinstance(v, list) else v for k, v in params.items()}
+    return REGISTRY[name](**params)
 
 
-def _get_pipeline_steps(args: argparse.Namespace) -> List[Tuple[str, Any]]:
-    """Build transform steps from CLI arguments."""
-    steps: List[Tuple[str, Any]] = []
-    if args.rotate:
-        steps.append(("rotation", Rotate(angle=args.rotate_angles[0])))
-    if args.mirror:
-        steps.append(("mirror", Mirror()))
-    if args.brightness_contrast:
-        steps.append(
-            (
-                "brightness_contrast",
-                BrightnessContrast(
-                    brightness_range=tuple(args.brightness_range),
-                    contrast_range=tuple(args.contrast_range),
-                ),
-            )
-        )
-    if args.noise:
-        if args.noise_type == "gaussian":
-            steps.append(("noise", GaussianNoise(amount=args.noise_amount)))
-        else:
-            steps.append(("noise", SaltPepperNoise(amount=args.noise_amount)))
-    if args.crop:
-        steps.append(("crop", RandomCrop(crop_size=tuple(args.crop_size))))
-    if args.pca:
-        steps.append(("pca", PCAColorAugmentation(alpha_std=args.pca_alpha_std)))
-    if args.hsv:
-        steps.append(("hsv", ConvertColorSpace(target="hsv")))
-    if args.lab:
-        steps.append(("lab", ConvertColorSpace(target="lab")))
-    if args.fourier:
-        steps.append(("fourier", FourierTransform()))
-    if args.gradient:
-        steps.append(("gradient", GradientChannels()))
-    if args.multispectral:
-        steps.append(("multispectral", Multispectral()))
-    if args.edge:
-        steps.append(("edge", EdgeChannels()))
-    if args.green:
-        steps.append(("green", EnhanceGreen()))
-    if args.custom_filter == "emboss":
-        steps.append(("emboss", Emboss()))
-    elif args.custom_filter == "sharpen":
-        steps.append(("sharpen", Sharpen()))
+def steps_from_config(config: Dict[str, Any]) -> List[ImageTransform]:
+    """``[[steps]]`` tables: ``transform = "Resize"`` plus that transform's parameters."""
+    steps = []
+    for table in config.get("steps", []):
+        table = dict(table)
+        steps.append(build_step(table.pop("transform"), table))
     return steps
 
 
-def _process_input(args: argparse.Namespace) -> str:
-    """Resolve input path, extracting video frames if necessary."""
-    if args.input_type == "video":
-        if not os.path.isfile(args.input):
-            raise ValueError("For video input, provide a path to a video file.")
-        frames_dir = os.path.join(args.output_dir, "video_frames")
-        logger.info("Extracting frames from video: %s", args.input)
-        extract_frames(args.input, frames_dir, fps=args.fps)
-        return frames_dir
-    elif args.input_type == "images":
-        if not os.path.isdir(args.input):
-            raise ValueError("For image input, provide a directory path.")
-        return str(args.input)
-    elif args.input_type == "single_image":
-        if not os.path.isfile(args.input):
-            raise ValueError("For single image input, provide a file path.")
-        return str(args.input)
-    else:
-        raise ValueError(f"Invalid input type: {args.input_type}")
-
-
-def _execute_pipeline(args: argparse.Namespace, input_path: str) -> None:
-    """Run the selected pipeline."""
-    if args.pipeline == "gan":
-        gan = GANPipeline(dataset=None, size=tuple(args.crop_size))
-        if args.input_type == "video":
-            gan.load_and_transform(video_path=input_path, fps=args.fps)
-        else:
-            gan.load_and_transform(images_dir=input_path)
-
-    elif args.pipeline == "unet":
-        seg = SegmentationPipeline(dataset=None, mode="binary")
-        if os.path.isdir(input_path):
-            # For CLI we don't have masks_dir — just transform images
-            images = seg.load_images(input_path)
-            X = seg.transform_images(images)
-            out_dir = os.path.join(args.output_dir, "segmentation")
-            os.makedirs(out_dir, exist_ok=True)
-            for i, img in enumerate(X):
-                cv2.imwrite(os.path.join(out_dir, f"seg_{i:06d}.png"), img)
-
-    elif args.pipeline == "diffusion":
-        diff = DiffusionPipeline(dataset=None, size=tuple(args.crop_size))
-        images = diff.load_images(input_path)
-        X = diff.transform_images(images)
-        out_dir = os.path.join(args.output_dir, "diffusion")
-        os.makedirs(out_dir, exist_ok=True)
-        for i, img in enumerate(X):
-            cv2.imwrite(os.path.join(out_dir, f"diff_{i:06d}.png"), img)
-
-    elif args.pipeline in ("custom", "showcase"):
-        steps = _get_pipeline_steps(args)
-        if args.pipeline == "showcase":
-            _showcase_pipeline(input_path, args.output_dir, steps)
-        else:
-            from datapalette.transforms.base import Compose
-
-            pipe = Compose(steps)
-            process_directory(
-                input_path,
-                args.output_dir,
-                lambda img: cast(np.ndarray, pipe.transform(img)),
-                desc="Custom pipeline",
-            )
-    else:
-        raise ValueError(f"Invalid pipeline: {args.pipeline}")
-
-
-def main() -> None:
-    """CLI entry point for DataPalette."""
-    parser = argparse.ArgumentParser(
-        description="DataPalette: Image Dataset Preprocessing & Augmentation"
-    )
-    parser.add_argument("--input", default=DEFAULT_INPUT_DIR, help="Input directory/file")
-    parser.add_argument("--output_dir", default=DEFAULT_OUTPUT_DIR, help="Output directory")
-    parser.add_argument(
-        "--pipeline",
-        choices=["gan", "unet", "diffusion", "custom", "showcase"],
-        required=True,
-    )
-    parser.add_argument(
-        "--input-type",
-        choices=["video", "images", "single_image"],
-        required=True,
-    )
-    parser.add_argument("--config", help="Path to YAML configuration file")
-
-    # Video
-    parser.add_argument("--fps", type=int, default=1)
-    # Crop / GAN
-    parser.add_argument("--crop-size", nargs=2, type=int, default=[256, 256])
-    parser.add_argument("--num-crops", type=int, default=5)
-    # Tile
-    parser.add_argument("--tile", action="store_true")
-    parser.add_argument("--tile-size", nargs=2, type=int, default=[256, 256])
-    parser.add_argument("--tile-overlap", type=float, default=0.0)
-    # Transforms
-    parser.add_argument("--rotate", action="store_true")
-    parser.add_argument("--rotate-angles", nargs="+", type=float, default=[90, 180, 270])
-    parser.add_argument("--mirror", action="store_true")
-    parser.add_argument("--brightness-contrast", action="store_true")
-    parser.add_argument("--brightness-range", nargs=2, type=float, default=[0.5, 1.5])
-    parser.add_argument("--contrast-range", nargs=2, type=float, default=[0.5, 1.5])
-    parser.add_argument("--noise", action="store_true")
-    parser.add_argument("--noise-type", choices=["gaussian", "salt_and_pepper"], default="gaussian")
-    parser.add_argument("--noise-amount", type=float, default=0.05)
-    parser.add_argument("--crop", action="store_true")
-    parser.add_argument("--pca", action="store_true")
-    parser.add_argument("--pca-alpha-std", type=float, default=0.1)
-    parser.add_argument("--hsv", action="store_true")
-    parser.add_argument("--lab", action="store_true")
-    parser.add_argument("--fourier", action="store_true")
-    parser.add_argument("--gradient", action="store_true")
-    parser.add_argument("--multispectral", action="store_true")
-    parser.add_argument("--edge", action="store_true")
-    parser.add_argument("--green", action="store_true")
-    parser.add_argument("--custom-filter", choices=["emboss", "sharpen"])
-
-    args = parser.parse_args()
-
-    # Merge config file (with key normalization)
+def _resolve_steps(args: argparse.Namespace) -> List[ImageTransform]:
+    """CLI --step flags win over the config file."""
+    if args.step:
+        return [parse_step(s) for s in args.step]
     if args.config:
-        config = load_config(args.config)
-        for key, value in config.items():
-            if not getattr(args, key, None):
-                setattr(args, key, value)
+        from datapalette.utils.config import load_config
 
-    os.makedirs(args.output_dir, exist_ok=True)
-    setup_logging(os.path.join(args.output_dir, "datapalette.log"))
-    logger.info("Starting DataPalette with pipeline: %s", args.pipeline)
+        return steps_from_config(load_config(args.config))
+    raise SystemExit("no steps: pass --step (repeatable) or --config with [[steps]] tables")
 
+
+def _cmd_list(args: argparse.Namespace) -> int:
+    for name, cls in REGISTRY.items():
+        params = ", ".join(f"{k}={v!r}" for k, v in cls().get_params().items()) if name != "Compose" else ""
+        doc = (cls.__doc__ or "").strip().splitlines()[0]
+        print(f"{name}({params})\n    {doc}")
+    return 0
+
+
+def _cmd_apply(args: argparse.Namespace) -> int:
+    from datapalette.io.batch import process_directory, write_outputs
+
+    pipe = Compose(_resolve_steps(args))
+    os.makedirs(args.output, exist_ok=True)
+    if os.path.isdir(args.input):
+        paths = process_directory(args.input, args.output, pipe.transform, output_format=args.format)
+    else:
+        image = cv2.imread(args.input)
+        if image is None:
+            raise SystemExit(f"cannot read image: {args.input}")
+        stem = os.path.splitext(os.path.basename(args.input))[0]
+        paths = write_outputs(pipe.transform(image), args.output, stem, args.format)
+    logger.info("wrote %d image(s) to %s", len(paths), args.output)
+    return 0
+
+
+def _cmd_showcase(args: argparse.Namespace) -> int:
+    image: Any = cv2.imread(args.image)
+    if image is None:
+        raise SystemExit(f"cannot read image: {args.image}")
+    os.makedirs(args.output, exist_ok=True)
+    for i, step in enumerate(_resolve_steps(args), start=1):
+        image = step.transform(image)
+        path = os.path.join(args.output, f"{i:02d}_{type(step).__name__.lower()}.png")
+        cv2.imwrite(path, image)
+        logger.info("%s -> %s", step, path)
+    return 0
+
+
+def _cmd_run(args: argparse.Namespace) -> int:
+    from datapalette.io.batch import write_outputs
+    from datapalette.pipelines import DiffusionPipeline, GANPipeline, SegmentationPipeline
+
+    size = tuple(args.size)
+    masks = None
+    if args.pipeline == "gan":
+        images, _ = GANPipeline(dataset=None, size=size).load_and_transform(
+            images_dir=args.images, video_path=args.video, fps=args.fps
+        )
+    elif args.pipeline == "diffusion":
+        images, _ = DiffusionPipeline(dataset=None, size=size).load_and_transform(images_dir=args.images)
+    else:
+        if not args.masks:
+            raise SystemExit("the segmentation pipeline needs --masks")
+        images, masks = SegmentationPipeline(dataset=None, size=size).load_and_transform(
+            images_dir=args.images, masks_dir=args.masks
+        )
+    for i, image in enumerate(images):
+        write_outputs(image, os.path.join(args.output, "images"), f"{i:06d}")
+    for i, mask in enumerate(masks or []):
+        write_outputs(mask, os.path.join(args.output, "masks"), f"{i:06d}")
+    logger.info("wrote %d image(s) to %s", len(images), args.output)
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="datapalette", description="DataPalette: image dataset preprocessing & augmentation"
+    )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+    parser.add_argument("-v", "--verbose", action="store_true")
+    sub = parser.add_subparsers(dest="cmd", required=True)
+
+    p = sub.add_parser("list-transforms", help="list available transforms and their parameters")
+    p.set_defaults(func=_cmd_list)
+
+    def add_steps(p: argparse.ArgumentParser) -> None:
+        p.add_argument(
+            "--step", action="append", default=[], help='e.g. "Resize(size=(64, 64))" (repeatable)'
+        )
+        p.add_argument("--config", help="TOML file with [[steps]] tables (used when no --step is given)")
+
+    p = sub.add_parser("apply", help="apply a transform chain to an image or a directory")
+    p.add_argument("input", help="image file or directory")
+    p.add_argument("-o", "--output", required=True, help="output directory")
+    p.add_argument("--format", default="png", help="output extension (default png)")
+    add_steps(p)
+    p.set_defaults(func=_cmd_apply)
+
+    p = sub.add_parser("showcase", help="save every intermediate step for one image")
+    p.add_argument("image")
+    p.add_argument("-o", "--output", required=True)
+    add_steps(p)
+    p.set_defaults(func=_cmd_showcase)
+
+    p = sub.add_parser("run", help="run a task pipeline (gan, segmentation, diffusion)")
+    p.add_argument("pipeline", choices=["gan", "segmentation", "diffusion"])
+    src = p.add_mutually_exclusive_group(required=True)
+    src.add_argument("--images", help="directory of images")
+    src.add_argument("--video", help="video file (gan only)")
+    p.add_argument("--masks", help="directory of masks, same filenames (segmentation)")
+    p.add_argument("--fps", type=int, default=1, help="frames per second to extract from --video")
+    p.add_argument("--size", nargs=2, type=int, default=[64, 64], metavar=("H", "W"))
+    p.add_argument("-o", "--output", required=True)
+    p.set_defaults(func=_cmd_run)
+    return parser
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    args = build_parser().parse_args(argv)
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format="%(asctime)s %(name)s %(levelname)s %(message)s",
+    )
+    if args.cmd == "run" and args.video and args.pipeline != "gan":
+        raise SystemExit("--video is only supported by the gan pipeline")
     try:
-        input_path = _process_input(args)
-
-        # Apply tiling if requested
-        if args.tile and args.pipeline != "showcase":
-            tile = Tile(tile_size=tuple(args.tile_size), overlap=args.tile_overlap)
-            tiled_dir = os.path.join(args.output_dir, "tiled_input")
-            process_directory(
-                input_path, tiled_dir, lambda img: tile.transform(img)[0], desc="Tiling"
-            )
-            input_path = tiled_dir
-
-        _execute_pipeline(args, input_path)
-        logger.info("DataPalette execution completed successfully")
-    except Exception:
-        logger.exception("An error occurred during execution")
-        raise
+        return args.func(args)
+    except ValueError as e:
+        logger.error("%s", e)
+        return 2
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

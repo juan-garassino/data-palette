@@ -43,8 +43,7 @@ def load_mnist(train: bool = True, root: str = "./data") -> Tuple[np.ndarray, np
         from torchvision.datasets import MNIST
     except ImportError as e:
         raise ImportError(
-            "torchvision is required for built-in datasets. "
-            "Install with: pip install datapalette[torch]"
+            "torchvision is required for built-in datasets. Install with: pip install datapalette[torch]"
         ) from e
 
     ds = MNIST(root=root, train=train, download=True)
@@ -73,8 +72,7 @@ def load_fashion_mnist(train: bool = True, root: str = "./data") -> Tuple[np.nda
         from torchvision.datasets import FashionMNIST
     except ImportError as e:
         raise ImportError(
-            "torchvision is required for built-in datasets. "
-            "Install with: pip install datapalette[torch]"
+            "torchvision is required for built-in datasets. Install with: pip install datapalette[torch]"
         ) from e
 
     ds = FashionMNIST(root=root, train=train, download=True)

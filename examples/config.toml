@@ -1,0 +1,20 @@
+# datapalette apply photos/ -o out/ --config examples/config.toml
+# Each [[steps]] table is one transform: `transform` names it (see `datapalette list-transforms`),
+# every other key is a parameter. --step flags on the command line replace this list.
+
+[[steps]]
+transform = "AspectResize"
+max_size = 256
+
+[[steps]]
+transform = "SquareCrop"
+
+[[steps]]
+transform = "Mirror"
+mode = "horizontal"
+
+[[steps]]
+transform = "BrightnessContrast"
+brightness_range = [-0.1, 0.1]
+contrast_range = [0.9, 1.1]
+random_state = 0
