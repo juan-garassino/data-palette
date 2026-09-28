@@ -3,7 +3,7 @@ from __future__ import annotations
 import cv2
 import numpy as np
 
-from datapalette.transforms.base import ImageTransform
+from datapalette.transforms.base import ImageTransform, minmax_to_uint8
 
 __all__ = ["GradientChannels", "EdgeChannels"]
 
@@ -20,8 +20,8 @@ class GradientChannels(ImageTransform):
         magnitude = cv2.magnitude(grad_x, grad_y)
         direction = cv2.phase(grad_x, grad_y, angleInDegrees=True)
 
-        magnitude = cv2.normalize(magnitude, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-        direction = cv2.normalize(direction, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+        magnitude = minmax_to_uint8(magnitude)
+        direction = minmax_to_uint8(direction)
 
         return np.dstack((magnitude, direction))
 

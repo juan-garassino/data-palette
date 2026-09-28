@@ -70,9 +70,7 @@ class TaskPipeline:
 
         from datapalette.io.batch import IMAGE_EXTENSIONS, load_image
 
-        files = sorted(
-            f for f in os.listdir(images_dir) if f.lower().endswith(IMAGE_EXTENSIONS)
-        )
+        files = sorted(f for f in os.listdir(images_dir) if f.lower().endswith(IMAGE_EXTENSIONS))
         return [load_image(os.path.join(images_dir, f)) for f in files]
 
     def _transform_images(self, images: List[np.ndarray]) -> List[np.ndarray]:

@@ -33,3 +33,12 @@ class ImageTransform(BaseEstimator, TransformerMixin):
     def _apply(self, image: np.ndarray) -> np.ndarray:
         """Transform a single HxWxC image. Must be overridden by subclasses."""
         raise NotImplementedError
+
+
+def minmax_to_uint8(x: np.ndarray) -> np.ndarray:
+    """Linearly stretch an array to the full 0..255 range (constant arrays map to 0)."""
+    x = x.astype(np.float64)
+    lo, hi = float(x.min()), float(x.max())
+    if hi <= lo:
+        return np.zeros(x.shape, dtype=np.uint8)
+    return ((x - lo) * (255.0 / (hi - lo))).round().astype(np.uint8)

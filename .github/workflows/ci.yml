@@ -1,36 +1,43 @@
-name: CI
+name: ci
 
 on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
-
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v3
         with:
-          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+      - run: uv python install ${{ matrix.python-version }}
+      - run: uv sync --extra dev --python ${{ matrix.python-version }}
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy datapalette/
+      - run: uv run pytest -q --cov=datapalette --cov-report=term-missing
 
-      - name: Install dependencies
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv build
+      - run: uvx twine check dist/*
+      - name: Install the wheel in a clean venv and smoke it
         run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
-
-      - name: Lint with ruff
-        run: ruff check .
-
-      - name: Type check with mypy
-        run: mypy datapalette/
-
-      - name: Run tests with coverage
-        run: pytest --cov=datapalette --cov-report=term-missing
+          uv venv /tmp/wheeltest
+          uv pip install --python /tmp/wheeltest/bin/python dist/*.whl
+          /tmp/wheeltest/bin/python -c "import datapalette; print(datapalette.__version__)"
+          /tmp/wheeltest/bin/datapalette --help

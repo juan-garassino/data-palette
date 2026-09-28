@@ -165,9 +165,7 @@ class SquarePad(ImageTransform):
         else:
             top, bottom, left, right = pad_a, pad_b, 0, 0
 
-        return cv2.copyMakeBorder(
-            image, top, bottom, left, right, border, value=list(self.fill)
-        )
+        return cv2.copyMakeBorder(image, top, bottom, left, right, border, value=list(self.fill))
 
 
 class ManySquares(ImageTransform):
@@ -250,7 +248,7 @@ class DominantColor(ImageTransform):
         self.palette = palette if palette is not None else dict(self._DEFAULT_PALETTE)
         self.n_clusters = n_clusters
 
-    def transform(self, X: Union[np.ndarray, List[np.ndarray]]) -> Union[str, List[str]]:
+    def transform(self, X: Union[np.ndarray, List[np.ndarray]]) -> Union[str, List[str]]:  # type: ignore[override]
         if isinstance(X, np.ndarray) and X.ndim == 3:
             return self._label(X)
         return [self._label(img) for img in X]
@@ -273,7 +271,7 @@ class DominantColor(ImageTransform):
     @staticmethod
     def _rgb_to_lab(rgb: Sequence[int]) -> np.ndarray:
         """Convert a single RGB triple to CIELAB (float, L in [0,100])."""
-        bgr = np.uint8([[[rgb[2], rgb[1], rgb[0]]]])
+        bgr = np.array([[[rgb[2], rgb[1], rgb[0]]]], dtype=np.uint8)
         lab = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB).astype(np.float64)[0, 0]
         # OpenCV packs LAB into uint8: L*255/100, a+128, b+128. Undo the scaling
         # so deltaE is computed in true CIELAB units.

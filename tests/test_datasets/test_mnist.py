@@ -1,13 +1,10 @@
 from __future__ import annotations
 
+import importlib.util
+
 import pytest
 
-torch_available = True
-try:
-    import torch
-    import torchvision
-except ImportError:
-    torch_available = False
+torch_available = all(importlib.util.find_spec(m) is not None for m in ("torch", "torchvision"))
 
 
 @pytest.mark.skipif(not torch_available, reason="torch/torchvision not installed")
