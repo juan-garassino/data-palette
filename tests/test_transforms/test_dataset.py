@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from sklearn.pipeline import Pipeline
 
 from datapalette.transforms import (
     AspectResize,
@@ -11,6 +10,7 @@ from datapalette.transforms import (
     SquareCrop,
     SquarePad,
 )
+from datapalette.transforms.base import Compose
 
 
 @pytest.fixture
@@ -127,7 +127,7 @@ class TestDominantColor:
 
 class TestPipelineComposition:
     def test_resize_then_crop_produces_fixed_square(self, wide_image):
-        pipe = Pipeline(
+        pipe = Compose(
             [
                 ("resize", AspectResize(max_size=128)),
                 ("crop", SquareCrop()),

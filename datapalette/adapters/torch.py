@@ -21,8 +21,7 @@ class DataPaletteDataset:
     images_dir : str
         Directory containing source images.
     pipeline : object or None
-        A ``TaskPipeline`` instance. If provided its sklearn pipeline is used
-        for transforms.
+        A ``TaskPipeline`` (or any ``ImageTransform``) applied to each image.
     masks_dir : str or None
         Optional directory of mask images (for segmentation).
     transform : callable or None
@@ -64,7 +63,8 @@ class DataPaletteDataset:
 
         # Apply pipeline transforms
         if self.pipeline is not None:
-            image = self.pipeline.sklearn_pipeline.transform(image)
+            transform = getattr(self.pipeline, "transforms", self.pipeline)
+            image = transform.transform(image)
 
         mask = None
         if self.masks_dir is not None:

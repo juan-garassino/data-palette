@@ -3,9 +3,10 @@ from __future__ import annotations
 import argparse
 import logging
 import os
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, cast
 
 import cv2
+import numpy as np
 
 from datapalette.io.batch import process_directory
 from datapalette.io.video import extract_frames
@@ -134,8 +135,8 @@ def _execute_pipeline(args: argparse.Namespace, input_path: str) -> None:
         seg = SegmentationPipeline(dataset=None, mode="binary")
         if os.path.isdir(input_path):
             # For CLI we don't have masks_dir — just transform images
-            images = seg._load_images_from_dir(input_path)
-            X = seg._transform_images(images)
+            images = seg.load_images(input_path)
+            X = seg.transform_images(images)
             out_dir = os.path.join(args.output_dir, "segmentation")
             os.makedirs(out_dir, exist_ok=True)
             for i, img in enumerate(X):
@@ -143,8 +144,8 @@ def _execute_pipeline(args: argparse.Namespace, input_path: str) -> None:
 
     elif args.pipeline == "diffusion":
         diff = DiffusionPipeline(dataset=None, size=tuple(args.crop_size))
-        images = diff._load_images_from_dir(input_path)
-        X = diff._transform_images(images)
+        images = diff.load_images(input_path)
+        X = diff.transform_images(images)
         out_dir = os.path.join(args.output_dir, "diffusion")
         os.makedirs(out_dir, exist_ok=True)
         for i, img in enumerate(X):
@@ -155,13 +156,13 @@ def _execute_pipeline(args: argparse.Namespace, input_path: str) -> None:
         if args.pipeline == "showcase":
             _showcase_pipeline(input_path, args.output_dir, steps)
         else:
-            from sklearn.pipeline import Pipeline as SkPipeline
+            from datapalette.transforms.base import Compose
 
-            pipe = SkPipeline(steps)
+            pipe = Compose(steps)
             process_directory(
                 input_path,
                 args.output_dir,
-                lambda img: pipe.transform(img),
+                lambda img: cast(np.ndarray, pipe.transform(img)),
                 desc="Custom pipeline",
             )
     else:

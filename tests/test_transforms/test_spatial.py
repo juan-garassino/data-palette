@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from sklearn.pipeline import Pipeline
 
 from datapalette.transforms import Mirror, RandomCrop, Resize, Rotate, Tile
 
@@ -86,6 +85,7 @@ class TestResize:
 
 class TestSklearnPipelineComposition:
     def test_pipeline_compose(self, sample_image):
+        Pipeline = pytest.importorskip("sklearn.pipeline").Pipeline
         pipe = Pipeline(
             [
                 ("resize", Resize(size=(64, 64))),

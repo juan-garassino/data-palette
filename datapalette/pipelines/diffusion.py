@@ -61,11 +61,11 @@ class DiffusionPipeline(TaskPipeline):
             using a built-in dataset, or None for custom images.
         """
         if images_dir is not None:
-            images = self._load_images_from_dir(images_dir)
-            X = self._transform_images(images)
+            images = self.load_images(images_dir)
+            X = self.transform_images(images)
             return X, None
 
         data, labels = self._load_dataset()
         images = [cv2.cvtColor(img, cv2.COLOR_GRAY2BGR) for img in data[:, :, :, 0]]
-        X = self._transform_images(images)
+        X = self.transform_images(images)
         return X, labels

@@ -76,13 +76,13 @@ class GANPipeline(TaskPipeline):
 
             tmp = tempfile.mkdtemp()
             extract_frames(video_path, tmp, fps=fps)
-            images = self._load_images_from_dir(tmp)
+            images = self.load_images(tmp)
         elif images_dir is not None:
-            images = self._load_images_from_dir(images_dir)
+            images = self.load_images(images_dir)
         else:
             data, _ = self._load_dataset()
             # Convert (N, 28, 28, 1) grayscale to BGR for consistency
             images = [cv2.cvtColor(img, cv2.COLOR_GRAY2BGR) for img in data]
 
-        X = self._transform_images(images)
+        X = self.transform_images(images)
         return X, None

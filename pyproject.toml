@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "datapalette"
 dynamic = ["version"]
-description = "Image dataset preprocessing and augmentation toolkit with sklearn-compatible transforms."
+description = "Image dataset preprocessing and augmentation toolkit with scikit-learn-compatible transforms, no scikit-learn required."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -29,12 +29,11 @@ dependencies = [
     "opencv-python",
     "tqdm",
     "pyyaml",
-    "scikit-learn",
 ]
 
 [project.optional-dependencies]
 torch = ["torch", "torchvision"]
-dev = ["pytest", "pytest-cov", "ruff", "mypy"]
+dev = ["pytest", "pytest-cov", "ruff", "mypy", "scikit-learn>=1.6"]  # sklearn only for the interop test
 
 [project.scripts]
 datapalette = "datapalette.cli:main"

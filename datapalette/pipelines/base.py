@@ -3,9 +3,8 @@ from __future__ import annotations
 from typing import Any, List, Optional, Tuple
 
 import numpy as np
-from sklearn.pipeline import Pipeline
 
-from datapalette.transforms.base import ImageTransform
+from datapalette.transforms.base import Compose, ImageTransform
 
 __all__ = ["TaskPipeline"]
 
@@ -16,7 +15,7 @@ class TaskPipeline:
     Parameters
     ----------
     steps : list[tuple[str, ImageTransform]]
-        Named transform steps, passed directly to ``sklearn.pipeline.Pipeline``.
+        Named transform steps, chained with :class:`~datapalette.transforms.base.Compose`.
     dataset : str or None
         Name of a built-in dataset (e.g. ``'mnist'``, ``'fashion_mnist'``).
     """
@@ -28,7 +27,7 @@ class TaskPipeline:
     ):
         self.steps = steps or []
         self.dataset = dataset
-        self.pipeline = Pipeline(self.steps) if self.steps else None
+        self.transforms = Compose(self.steps)
 
     def load_and_transform(
         self,
@@ -40,13 +39,6 @@ class TaskPipeline:
         Must be overridden by subclasses.
         """
         raise NotImplementedError
-
-    @property
-    def sklearn_pipeline(self) -> Pipeline:
-        """Access the underlying sklearn Pipeline."""
-        if self.pipeline is None:
-            raise ValueError("No pipeline steps configured.")
-        return self.pipeline
 
     def _load_dataset(self) -> Tuple[np.ndarray, np.ndarray]:
         """Load the configured built-in dataset."""
@@ -64,7 +56,7 @@ class TaskPipeline:
             raise ValueError(f"Unknown dataset '{self.dataset}'. Choose from {list(loaders)}")
         return loader(train=True)
 
-    def _load_images_from_dir(self, images_dir: str) -> List[np.ndarray]:
+    def load_images(self, images_dir: str) -> List[np.ndarray]:
         """Load all images from a directory."""
         import os
 
@@ -73,8 +65,6 @@ class TaskPipeline:
         files = sorted(f for f in os.listdir(images_dir) if f.lower().endswith(IMAGE_EXTENSIONS))
         return [load_image(os.path.join(images_dir, f)) for f in files]
 
-    def _transform_images(self, images: List[np.ndarray]) -> List[np.ndarray]:
-        """Apply the sklearn pipeline to a list of images."""
-        if self.pipeline is None:
-            return images
-        return self.pipeline.transform(images)
+    def transform_images(self, images: List[np.ndarray]) -> List[np.ndarray]:
+        """Apply the configured transforms to a list of images."""
+        return self.transforms.transform(images)  # type: ignore[return-value]

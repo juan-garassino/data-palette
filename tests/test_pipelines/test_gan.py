@@ -16,8 +16,8 @@ class TestGANPipeline:
             assert img.shape == (32, 32, 3)
             assert img.dtype == np.uint8
 
-    def test_sklearn_pipeline_accessible(self):
+    def test_transforms_accessible(self):
         pipe = GANPipeline(dataset=None, size=(64, 64))
-        sk_pipe = pipe.sklearn_pipeline
+        sk_pipe = pipe.transforms
         assert sk_pipe is not None
         assert len(sk_pipe.steps) == 4

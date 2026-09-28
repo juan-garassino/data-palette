@@ -255,18 +255,19 @@ class DominantColor(ImageTransform):
 
     def dominant_rgb(self, image: np.ndarray) -> Tuple[int, int, int]:
         """Return the dominant colour of a BGR image as an RGB triple."""
-        from sklearn.cluster import KMeans
-
         rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         small = cv2.resize(rgb, (64, 64), interpolation=cv2.INTER_AREA)
         pixels = small.reshape(-1, 3).astype(np.float32)
 
-        k = min(self.n_clusters, len(np.unique(pixels, axis=0)))
-        k = max(1, k)
-        km = KMeans(n_clusters=k, n_init=10, random_state=0).fit(pixels)
-        labels, counts = np.unique(km.labels_, return_counts=True)
-        dominant = km.cluster_centers_[labels[int(np.argmax(counts))]]
-        return tuple(int(round(c)) for c in dominant)  # type: ignore[return-value]
+        k = max(1, min(self.n_clusters, len(np.unique(pixels, axis=0))))
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 50, 0.5)
+        cv2.setRNGSeed(0)
+        _, labels, centers = cv2.kmeans(  # type: ignore[call-overload]  # stubs reject bestLabels=None
+            pixels, k, None, criteria, 10, cv2.KMEANS_PP_CENTERS
+        )
+        ids, counts = np.unique(labels.ravel(), return_counts=True)
+        dominant = centers[ids[int(np.argmax(counts))]]
+        return (int(round(dominant[0])), int(round(dominant[1])), int(round(dominant[2])))
 
     @staticmethod
     def _rgb_to_lab(rgb: Sequence[int]) -> np.ndarray:

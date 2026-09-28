@@ -67,10 +67,10 @@ class SegmentationPipeline(TaskPipeline):
             ``(X_images, y_masks)`` with matching spatial transforms applied.
         """
         if images_dir is not None:
-            images = self._load_images_from_dir(images_dir)
+            images = self.load_images(images_dir)
             if masks_dir is None:
                 raise ValueError("masks_dir is required when using custom images.")
-            masks = self._load_images_from_dir(masks_dir)
+            masks = self.load_images(masks_dir)
         else:
             data, labels = self._load_dataset()
             images_raw = data[:, :, :, 0] if data.ndim == 4 else data
@@ -98,6 +98,6 @@ class SegmentationPipeline(TaskPipeline):
             masks = [m for m in mask_arr[:, :, :, 0]]
 
         # Apply same spatial transforms to images and masks
-        X = self._transform_images(images)
-        y = self._transform_images(masks)
+        X = self.transform_images(images)
+        y = self.transform_images(masks)
         return X, y
