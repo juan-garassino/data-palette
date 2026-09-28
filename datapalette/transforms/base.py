@@ -5,7 +5,7 @@ from typing import Any, Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
-__all__ = ["ImageTransform", "Compose", "minmax_to_uint8", "INTERPOLATION"]
+__all__ = ["ImageTransform", "MultiOutputTransform", "Compose", "minmax_to_uint8", "INTERPOLATION"]
 
 Images = Union[np.ndarray, List[np.ndarray]]
 
@@ -118,6 +118,21 @@ class ImageTransform:
         tags = _Probe().__sklearn_tags__()
         tags.requires_fit = False
         return tags
+
+
+class MultiOutputTransform(ImageTransform):
+    """A transform that turns one image into several (tiles, crops, ...).
+
+    ``transform`` always returns a flat list, for one image or many.
+    """
+
+    def transform(self, X: Images) -> List[np.ndarray]:  # type: ignore[override]
+        if isinstance(X, np.ndarray) and X.ndim in (2, 3):
+            return self._apply(X)
+        return [out for img in X for out in self._apply(img)]
+
+    def _apply(self, image: np.ndarray) -> List[np.ndarray]:  # type: ignore[override]
+        raise NotImplementedError
 
 
 class Compose(ImageTransform):

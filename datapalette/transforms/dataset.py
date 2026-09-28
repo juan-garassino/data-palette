@@ -15,7 +15,7 @@ from typing import List, Optional, Sequence, Tuple, Union
 import cv2
 import numpy as np
 
-from datapalette.transforms.base import ImageTransform
+from datapalette.transforms.base import ImageTransform, MultiOutputTransform
 
 __all__ = [
     "AspectResize",
@@ -162,7 +162,7 @@ class SquarePad(ImageTransform):
         return cv2.copyMakeBorder(image, top, bottom, left, right, border, value=list(self.fill))
 
 
-class ManySquares(ImageTransform):
+class ManySquares(MultiOutputTransform):
     """Multi-crop augmentation: derive several square crops from one image.
 
     For a portrait image, crops from the top and bottom; for a landscape image,
@@ -180,14 +180,6 @@ class ManySquares(ImageTransform):
 
     def __init__(self, ratio_threshold: float = 1.2):
         self.ratio_threshold = ratio_threshold
-
-    def transform(self, X: Union[np.ndarray, List[np.ndarray]]) -> List[np.ndarray]:
-        if isinstance(X, np.ndarray) and X.ndim == 3:
-            return self._apply(X)
-        crops: List[np.ndarray] = []
-        for img in X:
-            crops.extend(self._apply(img))
-        return crops
 
     def _apply(self, image: np.ndarray) -> List[np.ndarray]:  # type: ignore[override]
         h, w = image.shape[:2]

@@ -1,3 +1,5 @@
 from __future__ import annotations
 
-__all__: list[str] = []
+from datapalette.adapters.torch import DataPaletteDataset
+
+__all__ = ["DataPaletteDataset"]

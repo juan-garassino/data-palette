@@ -35,10 +35,8 @@ class CustomKernel(ImageTransform):
         2-D convolution kernel.
     """
 
-    _DEFAULT = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]], dtype=np.float32)
-
     def __init__(self, kernel: np.ndarray | None = None):
-        self.kernel = kernel if kernel is not None else self._DEFAULT
+        self.kernel = kernel if kernel is not None else Sharpen._KERNEL
 
     def _apply(self, image: np.ndarray) -> np.ndarray:
         return cv2.filter2D(image, -1, self.kernel)

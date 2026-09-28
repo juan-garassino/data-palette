@@ -6,14 +6,9 @@ import cv2
 import numpy as np
 import pytest
 
-torch_available = True
-try:
-    import torch
-except ImportError:
-    torch_available = False
+torch = pytest.importorskip("torch")
 
 
-@pytest.mark.skipif(not torch_available, reason="torch not installed")
 class TestDataPaletteDataset:
     def test_len(self, tmp_image_dir):
         from datapalette.adapters.torch import DataPaletteDataset
@@ -25,14 +20,23 @@ class TestDataPaletteDataset:
         from datapalette.adapters.torch import DataPaletteDataset
 
         ds = DataPaletteDataset(images_dir=tmp_image_dir)
-        image, label = ds[0]
+        image = ds[0]
         assert isinstance(image, torch.Tensor)
         # CHW format, float32
         assert image.ndim == 3
         assert image.dtype == torch.float32
         assert image.min() >= 0.0
         assert image.max() <= 1.0
-        assert label is None
+
+    def test_dataloader_collates_without_masks(self, tmp_image_dir):
+        from torch.utils.data import DataLoader
+
+        from datapalette import GANPipeline
+        from datapalette.adapters import DataPaletteDataset
+
+        ds = DataPaletteDataset(images_dir=tmp_image_dir, pipeline=GANPipeline(dataset=None, size=(16, 16)))
+        batch = next(iter(DataLoader(ds, batch_size=3)))
+        assert batch.shape == (3, 3, 16, 16)
 
     def test_with_masks(self, tmp_path):
         from datapalette.adapters.torch import DataPaletteDataset

@@ -1,11 +1,16 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 import cv2
 import numpy as np
 
-from datapalette.transforms.base import ImageTransform, interpolation_flag, keep_channel_axis
+from datapalette.transforms.base import (
+    ImageTransform,
+    MultiOutputTransform,
+    interpolation_flag,
+    keep_channel_axis,
+)
 
 __all__ = ["Rotate", "Mirror", "RandomCrop", "Tile", "Resize"]
 
@@ -98,7 +103,7 @@ class RandomCrop(ImageTransform):
         return image[top : top + ch, left : left + cw]
 
 
-class Tile(ImageTransform):
+class Tile(MultiOutputTransform):
     """Split an image into overlapping tiles.
 
     ``transform`` always returns a *list* of tiles (even for a single image).
@@ -114,14 +119,6 @@ class Tile(ImageTransform):
     def __init__(self, tile_size: Tuple[int, int] = (256, 256), overlap: float = 0.0):
         self.tile_size = tile_size
         self.overlap = overlap
-
-    def transform(self, X: Union[np.ndarray, List[np.ndarray]]) -> List[np.ndarray]:
-        if isinstance(X, np.ndarray) and X.ndim == 3:
-            return self._apply(X)
-        tiles: List[np.ndarray] = []
-        for img in X:
-            tiles.extend(self._apply(img))
-        return tiles
 
     def _apply(self, image: np.ndarray) -> List[np.ndarray]:  # type: ignore[override]
         h, w = image.shape[:2]

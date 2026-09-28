@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Callable, Optional, Tuple
+from typing import Any, Callable, Optional
 
 import cv2
 import numpy as np
@@ -45,7 +45,7 @@ class DataPaletteDataset:
     def __len__(self) -> int:
         return len(self._image_files)
 
-    def __getitem__(self, idx: int) -> Tuple[Any, Any]:
+    def __getitem__(self, idx: int) -> Any:
         try:
             import torch
         except ImportError as e:
@@ -54,7 +54,7 @@ class DataPaletteDataset:
             ) from e
 
         img_path = os.path.join(self.images_dir, self._image_files[idx])
-        image = cv2.imread(img_path)
+        image: Any = cv2.imread(img_path)
         if image is None:
             raise ValueError(f"Failed to read image: {img_path}")
 
@@ -79,9 +79,8 @@ class DataPaletteDataset:
         if self.transform is not None:
             image = self.transform(image)
 
-        if mask is not None:
-            label = torch.from_numpy(mask.astype(np.int64))
-        else:
-            label = None  # type: ignore[assignment]
-
-        return image, label
+        if self.masks_dir is None:
+            return image  # a bare tensor collates cleanly; (image, None) did not
+        if mask is None:
+            raise FileNotFoundError(f"no mask named {self._image_files[idx]} in {self.masks_dir}")
+        return image, torch.from_numpy(mask.astype(np.int64))
