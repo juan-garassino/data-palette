@@ -8,9 +8,9 @@ from typing import Any, Callable, Optional, Tuple
 import cv2
 import numpy as np
 
-__all__ = ["DataPaletteDataset"]
+from datapalette.io.batch import IMAGE_EXTENSIONS
 
-IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif")
+__all__ = ["DataPaletteDataset"]
 
 
 class DataPaletteDataset:
@@ -64,7 +64,6 @@ class DataPaletteDataset:
         if image is None:
             raise ValueError(f"Failed to read image: {img_path}")
 
-        # Apply pipeline transforms
         if self.pipeline is not None:
             image = self.pipeline.sklearn_pipeline.transform(image)
 
@@ -74,7 +73,6 @@ class DataPaletteDataset:
             if os.path.isfile(mask_path):
                 mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
 
-        # Convert to tensor
         if isinstance(image, np.ndarray):
             # HWC -> CHW, float32 [0,1]
             if image.ndim == 2:

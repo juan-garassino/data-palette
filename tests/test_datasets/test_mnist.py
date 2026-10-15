@@ -4,8 +4,8 @@ import pytest
 
 torch_available = True
 try:
-    import torch
-    import torchvision
+    import torch  # noqa: F401  (availability check)
+    import torchvision  # noqa: F401  (availability check)
 except ImportError:
     torch_available = False
 
