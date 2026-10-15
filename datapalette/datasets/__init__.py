@@ -1,3 +1,5 @@
+"""Built-in dataset loaders and segmentation-mask generators."""
+
 from __future__ import annotations
 
 from datapalette.datasets.mnist import load_fashion_mnist, load_mnist

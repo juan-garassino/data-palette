@@ -1,3 +1,5 @@
+"""PyTorch ``Dataset`` adapter (requires the ``[torch]`` extra at item-access time)."""
+
 from __future__ import annotations
 
 import os

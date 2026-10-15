@@ -1,3 +1,5 @@
+"""MNIST and Fashion-MNIST loaders returning NumPy arrays (requires torchvision)."""
+
 from __future__ import annotations
 
 from typing import Tuple

@@ -1,3 +1,5 @@
+"""sklearn-compatible image transforms."""
+
 from __future__ import annotations
 
 from datapalette.transforms.base import ImageTransform

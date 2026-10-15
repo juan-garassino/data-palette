@@ -1,3 +1,5 @@
+"""Image, directory and video input/output helpers."""
+
 from __future__ import annotations
 
 from datapalette.io.batch import load_image, process_directory, save_image

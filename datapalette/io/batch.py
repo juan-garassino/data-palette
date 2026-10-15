@@ -1,3 +1,5 @@
+"""Single-image and directory-level image I/O."""
+
 from __future__ import annotations
 
 import logging

@@ -1,3 +1,5 @@
+"""Task-aware pipelines that return ``(X, y)`` pairs."""
+
 from __future__ import annotations
 
 from datapalette.pipelines.base import TaskPipeline

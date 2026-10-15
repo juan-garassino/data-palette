@@ -171,7 +171,7 @@ The other pipelines are available through the same flags (`--pipeline gan`,
 | `EdgeChannels` | `edges` | `low_threshold: int = 100`, `high_threshold: int = 200` |
 | `Emboss` | `filters` | *(none)* |
 | `Sharpen` | `filters` | *(none)* |
-| `CustomKernel` | `filters` | `kernel: np.ndarray` |
+| `CustomKernel` | `filters` | `kernel: np.ndarray \| None = None` (3x3 sharpen kernel when `None`) |
 | `AspectResize` | `dataset` | `max_size: int = 256` |
 | `SquareCrop` | `dataset` | `h_align: str = "center"` (`left`/`center`/`right`), `v_align: str = "center"` (`top`/`center`/`bottom`) |
 | `SquarePad` | `dataset` | `border_type: str = "constant"` (`constant`/`reflect`/`replicate`), `fill: tuple = (0, 0, 0)` |

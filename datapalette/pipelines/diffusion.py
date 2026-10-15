@@ -1,3 +1,5 @@
+"""Preprocessing pipeline for diffusion-model training data."""
+
 from __future__ import annotations
 
 import logging

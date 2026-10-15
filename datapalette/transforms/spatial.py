@@ -1,3 +1,5 @@
+"""Geometric transforms: rotate, mirror, crop, tile, resize."""
+
 from __future__ import annotations
 
 from typing import List, Tuple, Union
@@ -95,6 +97,18 @@ class Tile(ImageTransform):
         self.overlap = overlap
 
     def transform(self, X: Union[np.ndarray, List[np.ndarray]]) -> List[np.ndarray]:
+        """Split image(s) into tiles.
+
+        Parameters
+        ----------
+        X : np.ndarray or list[np.ndarray]
+            One ``(H, W, C)`` image or a list of them.
+
+        Returns
+        -------
+        list[np.ndarray]
+            Flat list of ``(tile_h, tile_w, C)`` tiles, same dtype as the input.
+        """
         if isinstance(X, np.ndarray) and X.ndim == 3:
             return self._apply(X)
         tiles: List[np.ndarray] = []

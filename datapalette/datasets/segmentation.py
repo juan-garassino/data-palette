@@ -1,3 +1,5 @@
+"""Synthetic segmentation-mask generators for digit images."""
+
 from __future__ import annotations
 
 from typing import Tuple

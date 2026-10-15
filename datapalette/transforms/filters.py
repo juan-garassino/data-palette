@@ -1,3 +1,5 @@
+"""Convolution-kernel filters (emboss, sharpen, custom)."""
+
 from __future__ import annotations
 
 import cv2
@@ -31,8 +33,9 @@ class CustomKernel(ImageTransform):
 
     Parameters
     ----------
-    kernel : np.ndarray
-        2-D convolution kernel.
+    kernel : np.ndarray or None
+        2-D float convolution kernel. Defaults to the 3x3 sharpen kernel
+        when ``None``.
     """
 
     _DEFAULT = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]], dtype=np.float32)

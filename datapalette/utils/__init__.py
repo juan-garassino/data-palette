@@ -1,3 +1,5 @@
+"""Logging and configuration helpers."""
+
 from __future__ import annotations
 
 from datapalette.utils.config import load_config

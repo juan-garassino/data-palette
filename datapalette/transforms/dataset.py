@@ -190,6 +190,19 @@ class ManySquares(ImageTransform):
         self.ratio_threshold = ratio_threshold
 
     def transform(self, X: Union[np.ndarray, List[np.ndarray]]) -> List[np.ndarray]:
+        """Split image(s) into square crops.
+
+        Parameters
+        ----------
+        X : np.ndarray or list[np.ndarray]
+            One ``(H, W, C)`` image or a list of them.
+
+        Returns
+        -------
+        list[np.ndarray]
+            Flat list of ``(S, S, C)`` square crops (S is the shorter side of
+            the source image), same dtype as the input.
+        """
         if isinstance(X, np.ndarray) and X.ndim == 3:
             return self._apply(X)
         crops: List[np.ndarray] = []
@@ -251,6 +264,18 @@ class DominantColor(ImageTransform):
         self.n_clusters = n_clusters
 
     def transform(self, X: Union[np.ndarray, List[np.ndarray]]) -> Union[str, List[str]]:
+        """Label image(s) with the nearest palette colour name.
+
+        Parameters
+        ----------
+        X : np.ndarray or list[np.ndarray]
+            One ``(H, W, 3)`` BGR uint8 image or a list of them.
+
+        Returns
+        -------
+        str or list[str]
+            One colour name for a single image, else one name per image.
+        """
         if isinstance(X, np.ndarray) and X.ndim == 3:
             return self._label(X)
         return [self._label(img) for img in X]

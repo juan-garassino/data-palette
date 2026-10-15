@@ -1,3 +1,5 @@
+"""Base class shared by the task pipelines."""
+
 from __future__ import annotations
 
 from typing import Any, List, Optional, Tuple

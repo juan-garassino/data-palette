@@ -1,3 +1,5 @@
+"""Video frame extraction and random-crop helpers."""
+
 from __future__ import annotations
 
 import logging

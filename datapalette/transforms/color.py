@@ -1,3 +1,5 @@
+"""Colour-space and colour-augmentation transforms (BGR input)."""
+
 from __future__ import annotations
 
 import logging
@@ -108,7 +110,8 @@ class EnhanceGreen(ImageTransform):
 class Multispectral(ImageTransform):
     """Simulate 7-channel multispectral imaging from a BGR image.
 
-    Output channels: B, G, R, Yellow, Cyan, Magenta, simulated NIR.
+    Input is ``(H, W, 3)`` BGR uint8; output is ``(H, W, 7)`` uint8 with
+    channels B, G, R, Yellow, Cyan, Magenta, simulated NIR.
     """
 
     def _apply(self, image: np.ndarray) -> np.ndarray:
