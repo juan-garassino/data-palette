@@ -165,9 +165,7 @@ class SquarePad(ImageTransform):
         else:
             top, bottom, left, right = pad_a, pad_b, 0, 0
 
-        return cv2.copyMakeBorder(
-            image, top, bottom, left, right, border, value=list(self.fill)
-        )
+        return cv2.copyMakeBorder(image, top, bottom, left, right, border, value=list(self.fill))
 
 
 class ManySquares(ImageTransform):

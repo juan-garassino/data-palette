@@ -40,10 +40,12 @@ with `sklearn.pipeline.Pipeline`:
 from sklearn.pipeline import Pipeline
 from datapalette import Rotate, GaussianNoise
 
-pipe = Pipeline([
-    ("rotate", Rotate(angle=15)),
-    ("noise", GaussianNoise(amount=0.03)),
-])
+pipe = Pipeline(
+    [
+        ("rotate", Rotate(angle=15)),
+        ("noise", GaussianNoise(amount=0.03)),
+    ]
+)
 
 import cv2
 
@@ -66,7 +68,7 @@ plain NumPy arrays (requires the `[torch]` extra):
 ```python
 from datapalette.datasets import load_mnist, load_fashion_mnist
 
-images, labels = load_mnist(train=True)       # (60000, 28, 28, 1) uint8
+images, labels = load_mnist(train=True)  # (60000, 28, 28, 1) uint8
 images, labels = load_fashion_mnist(train=True)
 ```
 
@@ -190,10 +192,12 @@ fixed-size training set:
 from sklearn.pipeline import Pipeline
 from datapalette import AspectResize, SquareCrop  # or SquarePad to keep the whole frame
 
-prep = Pipeline([
-    ("resize", AspectResize(max_size=512)),  # longest side -> 512, aspect preserved
-    ("square", SquareCrop(h_align="center")),  # crop the longer side to square, no rescaling
-])
+prep = Pipeline(
+    [
+        ("resize", AspectResize(max_size=512)),  # longest side -> 512, aspect preserved
+        ("square", SquareCrop(h_align="center")),  # crop the longer side to square, no rescaling
+    ]
+)
 ```
 
 A 160x120 (width x height) input comes out 384x384: the longest side is scaled to 512

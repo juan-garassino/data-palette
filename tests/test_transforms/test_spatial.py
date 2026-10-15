@@ -86,11 +86,13 @@ class TestResize:
 
 class TestSklearnPipelineComposition:
     def test_pipeline_compose(self, sample_image):
-        pipe = Pipeline([
-            ("resize", Resize(size=(64, 64))),
-            ("rotate", Rotate(angle=90)),
-            ("mirror", Mirror(mode="horizontal")),
-        ])
+        pipe = Pipeline(
+            [
+                ("resize", Resize(size=(64, 64))),
+                ("rotate", Rotate(angle=90)),
+                ("mirror", Mirror(mode="horizontal")),
+            ]
+        )
         result = pipe.transform(sample_image)
         assert result.shape == (64, 64, 3)
         assert result.dtype == np.uint8

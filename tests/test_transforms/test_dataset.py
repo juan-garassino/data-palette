@@ -127,10 +127,12 @@ class TestDominantColor:
 
 class TestPipelineComposition:
     def test_resize_then_crop_produces_fixed_square(self, wide_image):
-        pipe = Pipeline([
-            ("resize", AspectResize(max_size=128)),
-            ("crop", SquareCrop()),
-        ])
+        pipe = Pipeline(
+            [
+                ("resize", AspectResize(max_size=128)),
+                ("crop", SquareCrop()),
+            ]
+        )
         result = pipe.transform(wide_image)
         h, w = result.shape[:2]
         assert h == w  # square after crop

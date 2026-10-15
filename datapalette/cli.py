@@ -41,9 +41,7 @@ DEFAULT_INPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 DEFAULT_OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "results")
 
 
-def _showcase_pipeline(
-    input_image: str, output_dir: str, steps: List[Tuple[str, Any]]
-) -> None:
+def _showcase_pipeline(input_image: str, output_dir: str, steps: List[Tuple[str, Any]]) -> None:
     """Process a single image through all steps, saving each intermediate result."""
     os.makedirs(output_dir, exist_ok=True)
     img = cv2.imread(input_image)
@@ -65,13 +63,15 @@ def _get_pipeline_steps(args: argparse.Namespace) -> List[Tuple[str, Any]]:
     if args.mirror:
         steps.append(("mirror", Mirror()))
     if args.brightness_contrast:
-        steps.append((
-            "brightness_contrast",
-            BrightnessContrast(
-                brightness_range=tuple(args.brightness_range),
-                contrast_range=tuple(args.contrast_range),
-            ),
-        ))
+        steps.append(
+            (
+                "brightness_contrast",
+                BrightnessContrast(
+                    brightness_range=tuple(args.brightness_range),
+                    contrast_range=tuple(args.contrast_range),
+                ),
+            )
+        )
     if args.noise:
         if args.noise_type == "gaussian":
             steps.append(("noise", GaussianNoise(amount=args.noise_amount)))
@@ -175,12 +175,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="DataPalette: Image Dataset Preprocessing & Augmentation"
     )
-    parser.add_argument(
-        "--input", default=DEFAULT_INPUT_DIR, help="Input directory/file"
-    )
-    parser.add_argument(
-        "--output_dir", default=DEFAULT_OUTPUT_DIR, help="Output directory"
-    )
+    parser.add_argument("--input", default=DEFAULT_INPUT_DIR, help="Input directory/file")
+    parser.add_argument("--output_dir", default=DEFAULT_OUTPUT_DIR, help="Output directory")
     parser.add_argument(
         "--pipeline",
         choices=["gan", "unet", "diffusion", "custom", "showcase"],
