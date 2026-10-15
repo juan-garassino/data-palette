@@ -11,20 +11,22 @@ segmentation, and diffusion models.
 ## Installation
 
 ```bash
-pip install datapalette
+git clone https://github.com/juan-garassino/data-palette.git
+cd data-palette
+pip install -e .
 ```
 
 With PyTorch/torchvision support (required for built-in datasets and the
 `DataPaletteDataset` adapter):
 
 ```bash
-pip install datapalette[torch]
+pip install -e ".[torch]"
 ```
 
 For development (testing, linting, type checking):
 
 ```bash
-pip install datapalette[dev]
+pip install -e ".[dev]"
 ```
 
 ---
@@ -45,10 +47,14 @@ pipe = Pipeline([
 
 import cv2
 
-image = cv2.imread("photo.jpg")
-augmented = pipe.transform(image)
+image = cv2.imread("photo.jpg")  # BGR uint8, shape (H, W, 3)
+augmented = pipe.fit_transform(image)
 cv2.imwrite("augmented.jpg", augmented)
 ```
+
+`fit_transform` is used because recent scikit-learn releases raise
+`NotFittedError` when `Pipeline.transform` is called before `fit`
+(see [Known issues](#known-issues)).
 
 ---
 
@@ -70,6 +76,11 @@ images, labels = load_fashion_mnist(train=True)
 
 Pre-configured pipelines bundle common transforms for specific deep-learning
 tasks and return `(X, y)` pairs ready for training.
+
+> These snippets are not verified: with scikit-learn 1.9.1 the
+> `load_and_transform` calls currently raise `NotFittedError`
+> (see [Known issues](#known-issues)). The `dataset="mnist"` /
+> `"fashion_mnist"` variants also need the `[torch]` extra and a download.
 
 ### GANPipeline
 
@@ -124,20 +135,18 @@ for images, labels in loader:
 DataPalette includes a command-line interface for batch processing:
 
 ```bash
-# Run the GAN pipeline on a directory of images
-datapalette --pipeline gan --input-type images --input ./data --output_dir ./results
-
-# Apply custom transforms to a single image
-datapalette --pipeline custom --input-type single_image --input photo.jpg \
-    --rotate --rotate-angles 15 --noise --noise-type gaussian --noise-amount 0.05
-
-# Extract frames from video and run diffusion preprocessing
-datapalette --pipeline diffusion --input-type video --input clip.mp4 --fps 5
-
-# Showcase mode: save every intermediate step
+# Showcase mode: save every intermediate step (verified; writes
+# 01_rotation.png, 02_mirror.png, 03_brightness_contrast.png)
 datapalette --pipeline showcase --input-type single_image --input photo.jpg \
     --rotate --mirror --brightness-contrast --output_dir ./showcase
 ```
+
+The other pipelines are available through the same flags (`--pipeline gan`,
+`unet`, `diffusion`, `custom`; `--input-type video|images|single_image`; see
+`datapalette --help`), but they currently fail on scikit-learn 1.9.1, and
+`--pipeline custom` with `--input-type single_image` passes a file where
+`process_directory` expects a directory. An example config is in
+[`examples/config.yaml`](examples/config.yaml).
 
 ---
 
@@ -183,13 +192,28 @@ from datapalette import AspectResize, SquareCrop  # or SquarePad to keep the who
 
 prep = Pipeline([
     ("resize", AspectResize(max_size=512)),  # longest side -> 512, aspect preserved
-    ("square", SquareCrop(h_align="center")),  # crop to 512x512, no distortion
+    ("square", SquareCrop(h_align="center")),  # crop the longer side to square, no rescaling
 ])
 ```
+
+A 160x120 (width x height) input comes out 384x384: the longest side is scaled to 512
+(512x384), then the 512-pixel width is cropped to 384.
 
 `ManySquares` multiplies dataset size by emitting top/bottom (or left/right)
 crops from tall/wide sources, and `DominantColor` labels each image with its
 nearest named colour (KMeans + CIELAB deltaE) for foldering a set by colour.
+
+---
+
+## Known issues
+
+Checked with scikit-learn 1.9.1 on Python 3.12 (`pytest`: 73 passed, 5 failed,
+5 skipped):
+
+- `Pipeline.transform` before `fit` raises `NotFittedError`, which breaks
+  `TaskPipeline` subclasses, the CLI `custom`/`gan`/`unet`/`diffusion` paths and
+  `DataPaletteDataset`. [`ROADMAP.md`](ROADMAP.md) lists this as a v0.1.1 item.
+- `mypy datapalette/` reports 6 errors (CI runs it).
 
 ---
 

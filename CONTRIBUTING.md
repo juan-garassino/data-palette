@@ -10,7 +10,7 @@ workflow.
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/juan-garassino/dataPalette.git
+   git clone https://github.com/juan-garassino/data-palette.git
    cd dataPalette
    ```
 
@@ -84,13 +84,12 @@ Static types are checked with [mypy](https://mypy-lang.org/):
 mypy datapalette/
 ```
 
-Configuration is in `pyproject.toml` under `[tool.mypy]`.
 
 ---
 
 ## Pull Request Process
 
-1. Fork the repository and create a feature branch from `master`.
+1. Fork the repository and create a feature branch from `main`.
 2. Make your changes. Keep commits focused and descriptive.
 3. Ensure all checks pass locally:
    ```bash
@@ -98,7 +97,7 @@ Configuration is in `pyproject.toml` under `[tool.mypy]`.
    mypy datapalette/
    pytest --cov
    ```
-4. Open a pull request against `master` with a clear description of your
+4. Open a pull request against `main` with a clear description of your
    changes.
 5. A maintainer will review your PR. Address any feedback, then it will be
    merged.
