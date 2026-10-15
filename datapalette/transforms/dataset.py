@@ -250,7 +250,9 @@ class DominantColor(ImageTransform):
         self.palette = palette if palette is not None else dict(self._DEFAULT_PALETTE)
         self.n_clusters = n_clusters
 
-    def transform(self, X: Union[np.ndarray, List[np.ndarray]]) -> Union[str, List[str]]:
+    def transform(  # type: ignore[override]  # labels, not images
+        self, X: Union[np.ndarray, List[np.ndarray]]
+    ) -> Union[str, List[str]]:
         if isinstance(X, np.ndarray) and X.ndim == 3:
             return self._label(X)
         return [self._label(img) for img in X]

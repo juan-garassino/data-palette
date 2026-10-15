@@ -116,5 +116,5 @@ class Multispectral(ImageTransform):
         yellow = cv2.addWeighted(g, 0.5, r, 0.5, 0)
         cyan = cv2.addWeighted(b, 0.5, g, 0.5, 0)
         magenta = cv2.addWeighted(b, 0.5, r, 0.5, 0)
-        nir = cv2.add(r, 50)
+        nir = cv2.add(r, np.full_like(r, 50))  # saturating, same as the scalar form
         return np.dstack((b, g, r, yellow, cyan, magenta, nir))

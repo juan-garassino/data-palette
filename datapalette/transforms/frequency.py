@@ -20,7 +20,7 @@ class FourierTransform(ImageTransform):
         f = np.fft.fft2(channel)
         fshift = np.fft.fftshift(f)
         magnitude = 20 * np.log(np.abs(fshift) + 1)
-        return cv2.normalize(magnitude, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+        return cv2.normalize(magnitude, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)  # type: ignore[call-overload]
 
     def _apply(self, image: np.ndarray) -> np.ndarray:
         if image.ndim == 2 or image.shape[2] == 1:

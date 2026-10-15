@@ -77,7 +77,7 @@ class DataPaletteDataset:
             # HWC -> CHW, float32 [0,1]
             if image.ndim == 2:
                 image = image[:, :, np.newaxis]
-            image = torch.from_numpy(image.transpose(2, 0, 1).astype(np.float32) / 255.0)
+            image = torch.from_numpy(image.transpose(2, 0, 1).astype(np.float32) / 255.0)  # type: ignore[assignment]
 
         if self.transform is not None:
             image = self.transform(image)
