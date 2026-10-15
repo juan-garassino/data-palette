@@ -273,7 +273,7 @@ class DominantColor(ImageTransform):
     @staticmethod
     def _rgb_to_lab(rgb: Sequence[int]) -> np.ndarray:
         """Convert a single RGB triple to CIELAB (float, L in [0,100])."""
-        bgr = np.uint8([[[rgb[2], rgb[1], rgb[0]]]])
+        bgr = np.array([[[rgb[2], rgb[1], rgb[0]]]], dtype=np.uint8)
         lab = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB).astype(np.float64)[0, 0]
         # OpenCV packs LAB into uint8: L*255/100, a+128, b+128. Undo the scaling
         # so deltaE is computed in true CIELAB units.

@@ -18,6 +18,15 @@ class ImageTransform(BaseEstimator, TransformerMixin):
     ``transform`` dispatches a single image or a list of images to ``_apply``.
     """
 
+    def __sklearn_is_fitted__(self) -> bool:
+        """Transforms are usable without ``fit`` (stateless, or self-fitting on first use).
+
+        Recent scikit-learn versions call ``check_is_fitted`` from
+        ``Pipeline.transform``; without this hook an unfitted pipeline of
+        stateless transforms raises ``NotFittedError``.
+        """
+        return True
+
     def fit(self, X: Any, y: Any = None) -> ImageTransform:
         """No-op fit. Override for stateful transforms."""
         return self

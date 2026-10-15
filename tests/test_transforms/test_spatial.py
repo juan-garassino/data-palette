@@ -94,3 +94,11 @@ class TestSklearnPipelineComposition:
         result = pipe.transform(sample_image)
         assert result.shape == (64, 64, 3)
         assert result.dtype == np.uint8
+
+    def test_stateless_transforms_report_fitted(self):
+        # sklearn>=1.6 Pipeline.transform calls check_is_fitted on the last step;
+        # stateless transforms must not raise NotFittedError (G-001).
+        from sklearn.utils.validation import check_is_fitted
+
+        check_is_fitted(Resize(size=(8, 8)))
+        check_is_fitted(Pipeline([("resize", Resize(size=(8, 8)))]))
