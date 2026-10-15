@@ -33,7 +33,7 @@ dependencies = [
 
 [project.optional-dependencies]
 torch = ["torch", "torchvision"]
-dev = ["pytest", "pytest-cov", "ruff", "mypy"]
+dev = ["pytest", "pytest-cov", "ruff", "mypy", "types-PyYAML"]
 
 [project.scripts]
 datapalette = "datapalette.cli:main"

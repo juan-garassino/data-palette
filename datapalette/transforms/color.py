@@ -36,7 +36,7 @@ class PCAColorAugmentation(ImageTransform):
     def fit(self, X: Any, y: Any = None) -> PCAColorAugmentation:
         """Compute eigen-decomposition from a set of images."""
         if isinstance(X, np.ndarray) and X.ndim == 3:
-            pixels = X.reshape(-1, 3).astype(np.float32)
+            pixels: np.ndarray = X.reshape(-1, 3).astype(np.float32)
         else:
             pixels = np.vstack([img.reshape(-1, 3) for img in X]).astype(np.float32)
 

@@ -63,6 +63,7 @@ are `.env.sample` (keys only, placeholder paths) and `.envrc` (`dotenv` only) â€
   need `__sklearn_is_fitted__` (or `requires_fit=False` tags).
 - The guardian push token cannot modify `.github/workflows/*`; CI hardening must be done by the owner.
 - `cv2.normalize(x, np.empty_like(x), ...)` is NOT equivalent to `dst=None` for float64 input (broke FourierTransform tests); prefer a targeted `type: ignore`.
+- CI runs a 3.9-3.12 matrix with different numpy/mypy versions; verify type checks on every matrix version (uv venvs) before pushing.
 - No network, pickle, or subprocess surface in the package; YAML uses `safe_load`.
 
 ## Ideas
@@ -75,3 +76,4 @@ are `.env.sample` (keys only, placeholder paths) and `.envrc` (`dotenv` only) â€
 
 - 2026-10-15 run #1: first run. Fixed G-001 (sklearn NotFittedError breaking 5 tests and all pipelines), G-004, G-005; G-002 fix reverted (push token lacks workflow scope); no secrets, no dependency vulns.
 - 2026-10-15 run #1 follow-up: CI `test (3.12)` was red on the mypy step (G-006, pre-existing). Fixed: targeted ignores on cv2.normalize/override, saturating `cv2.add` with an array operand; mypy 5 -> 0, ruff 0, 82 passed / 2 skipped locally.
+- 2026-10-15 run #1 follow-up 2: CI matrix reproduced locally with uv (3.9-3.12). Fixed a numpy-2.2 stub error (py3.10, color.py) and missing yaml stubs on py3.9 (added `types-PyYAML` to dev extra). mypy clean and 79 passed / 5 skipped on all four versions.
