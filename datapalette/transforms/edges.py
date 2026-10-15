@@ -1,3 +1,5 @@
+"""Gradient and edge-map transforms producing extra channels."""
+
 from __future__ import annotations
 
 import cv2
@@ -9,7 +11,12 @@ __all__ = ["GradientChannels", "EdgeChannels"]
 
 
 class GradientChannels(ImageTransform):
-    """Compute Sobel gradient magnitude and direction as a 2-channel image."""
+    """Compute Sobel gradient magnitude and direction as a 2-channel image.
+
+    Input is ``(H, W, 3)`` BGR or ``(H, W)`` grayscale uint8; output is
+    ``(H, W, 2)`` uint8 (channel 0 magnitude, channel 1 direction, each
+    min-max scaled to 0-255).
+    """
 
     def _apply(self, image: np.ndarray) -> np.ndarray:
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if image.ndim == 3 else image
@@ -28,6 +35,9 @@ class GradientChannels(ImageTransform):
 
 class EdgeChannels(ImageTransform):
     """Compute Canny edges and Laplacian as a 2-channel image.
+
+    Input is ``(H, W, 3)`` BGR or ``(H, W)`` grayscale uint8; output is
+    ``(H, W, 2)`` uint8 (channel 0 Canny, channel 1 absolute Laplacian).
 
     Parameters
     ----------

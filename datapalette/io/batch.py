@@ -1,3 +1,5 @@
+"""Single-image and directory-level image I/O."""
+
 from __future__ import annotations
 
 import logging
@@ -88,9 +90,7 @@ def process_directory(
         Paths to the saved output images.
     """
     os.makedirs(output_dir, exist_ok=True)
-    image_files = sorted(
-        f for f in os.listdir(input_dir) if f.lower().endswith(IMAGE_EXTENSIONS)
-    )
+    image_files = sorted(f for f in os.listdir(input_dir) if f.lower().endswith(IMAGE_EXTENSIONS))
 
     saved: List[str] = []
     for i in tqdm(range(0, len(image_files), batch_size), desc=desc, unit="batch"):

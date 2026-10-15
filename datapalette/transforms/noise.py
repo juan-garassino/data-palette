@@ -1,3 +1,5 @@
+"""Noise and brightness/contrast augmentation transforms."""
+
 from __future__ import annotations
 
 from typing import Tuple
@@ -49,13 +51,11 @@ class SaltPepperNoise(ImageTransform):
         h, w = image.shape[:2]
         total_pixels = h * w
 
-        # Salt
         num_salt = int(np.ceil(self.amount * total_pixels * self.salt_ratio))
         rows = np.random.randint(0, h, num_salt)
         cols = np.random.randint(0, w, num_salt)
-        noisy[rows, cols] = 255  # Fix: use 2D coords, set all channels
+        noisy[rows, cols] = 255
 
-        # Pepper
         num_pepper = int(np.ceil(self.amount * total_pixels * (1.0 - self.salt_ratio)))
         rows = np.random.randint(0, h, num_pepper)
         cols = np.random.randint(0, w, num_pepper)

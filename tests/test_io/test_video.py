@@ -4,7 +4,6 @@ import os
 
 import cv2
 import numpy as np
-import pytest
 
 from datapalette.io import extract_frames, n_croppings_from_frame
 

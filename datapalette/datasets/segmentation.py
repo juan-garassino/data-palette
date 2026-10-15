@@ -1,3 +1,5 @@
+"""Synthetic segmentation-mask generators for digit images."""
+
 from __future__ import annotations
 
 from typing import Tuple
@@ -28,9 +30,7 @@ def make_binary_masks(images: np.ndarray, threshold: float = 0.5) -> np.ndarray:
     return masks[:, :, :, np.newaxis]
 
 
-def make_multiclass_masks(
-    images: np.ndarray, labels: np.ndarray
-) -> np.ndarray:
+def make_multiclass_masks(images: np.ndarray, labels: np.ndarray) -> np.ndarray:
     """Create pixel-wise class masks from digit images.
 
     Each foreground pixel is assigned the digit's class label (0-9).

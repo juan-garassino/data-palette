@@ -1,3 +1,5 @@
+"""Frequency-domain transforms."""
+
 from __future__ import annotations
 
 import cv2
@@ -12,7 +14,8 @@ class FourierTransform(ImageTransform):
     """Compute the Fourier magnitude spectrum per channel.
 
     Returns a single-channel (grayscale) or multi-channel magnitude image of
-    the same spatial size as the input.
+    the same spatial size as the input: ``(H, W, C)`` or ``(H, W)`` in, uint8
+    out with the same shape, min-max scaled to 0-255.
     """
 
     @staticmethod

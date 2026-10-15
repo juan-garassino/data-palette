@@ -1,3 +1,5 @@
+"""``ImageTransform``, the base class of all transforms."""
+
 from __future__ import annotations
 
 from typing import Any, List, Union
@@ -25,7 +27,20 @@ class ImageTransform(BaseEstimator, TransformerMixin):
     def transform(
         self, X: Union[np.ndarray, List[np.ndarray]]
     ) -> Union[np.ndarray, List[np.ndarray]]:
-        """Apply the transform to a single image or list of images."""
+        """Apply the transform to a single image or list of images.
+
+        Parameters
+        ----------
+        X : np.ndarray or list[np.ndarray]
+            One ``(H, W, C)`` image (3-D array) or an iterable of images.
+
+        Returns
+        -------
+        np.ndarray or list[np.ndarray]
+            The transformed image for a 3-D array input, otherwise a list with
+            one result per input image. Output shape and dtype depend on the
+            subclass.
+        """
         if isinstance(X, np.ndarray) and X.ndim == 3:
             return self._apply(X)
         return [self._apply(img) for img in X]

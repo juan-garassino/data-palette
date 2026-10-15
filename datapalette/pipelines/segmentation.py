@@ -1,3 +1,5 @@
+"""Preprocessing pipeline for image/mask segmentation data."""
+
 from __future__ import annotations
 
 import logging

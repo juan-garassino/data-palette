@@ -1,3 +1,8 @@
+"""DataPalette: image dataset preprocessing and augmentation transforms.
+
+Re-exports the sklearn-compatible transforms, task pipelines and image I/O helpers.
+"""
+
 from __future__ import annotations
 
 __version__ = "0.1.0"
