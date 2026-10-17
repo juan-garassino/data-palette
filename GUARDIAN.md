@@ -33,6 +33,10 @@ Automated security & bug guardian ledger for `data-palette`. Branch: `claude/gua
 | G-010 | low | bug: `extract_frames` silently returned 0 for an unopenable video; `fps=0` -> ZeroDivisionError | datapalette/io/video.py | fixed | 2026-10-17 |
 | G-011 | medium | bug: torch `DataPaletteDataset` transformed images through the pipeline but returned masks untouched (shape/geometry mismatch) | datapalette/adapters/torch.py | fixed | 2026-10-17 |
 | G-012 | low | bug: `Rotate` border fill is 0, a valid class id for multiclass masks; `Rotate(border_value=...)` added, multiclass mask pipeline fills with ignore id 255 | transforms/spatial.py, pipelines/segmentation.py | fixed | 2026-10-17 |
+| G-014 | medium | bug: CLI `--config` could not override any option with a non-empty argparse default (fps, crop-size, ranges) | datapalette/cli.py | fixed | 2026-10-17 |
+| G-015 | medium | bug: CLI `--tile` kept only the top-left tile per image (IndexError if image < tile) | datapalette/cli.py | fixed | 2026-10-17 |
+| G-016 | low | input validation: `Tile` accepted overlap outside [0, 1) (>=1 -> stride 1 tile explosion) and non-positive tile_size | transforms/spatial.py | fixed | 2026-10-17 |
+| G-017 | low | resource leak: `GANPipeline` video input left a `mkdtemp` dir of frames per call | pipelines/gan.py | fixed | 2026-10-17 |
 | G-013 | medium | bug: `Rotate` pivoted on (w/2, h/2) instead of the pixel-grid centre, so a 90-degree rotation shifted by 1 px, dropped a row and injected a 0 row into images and masks | transforms/spatial.py | fixed | 2026-10-17 |
 
 G-001 detail: with scikit-learn >= 1.6, `Pipeline.transform` calls `check_is_fitted`
@@ -61,12 +65,12 @@ are `.env.sample` (keys only, placeholder paths) and `.envrc` (`dotenv` only) â€
 | metric | before | after |
 |---|---|---|
 | open vulns crit/high/med/low | 0/0/0/6 (dep vulns 0, secrets 0) | 0/0/0/2 (G-002, G-003; bandit B101 now configured-out) |
-| open bugs found this run | 6 (G-008..G-013) | 0 |
+| open bugs found this run | 10 (G-008..G-017) | 0 |
 | failing tests | 0 | 0 |
-| tests passed/skipped (no torch) | 79 / 5 | 93 / 6 (+15 tests; 1 new torch test) |
-| tests passed/skipped (with CPU torch, 3.11) | n/a | 98 / 1 |
+| tests passed/skipped (no torch) | 79 / 5 | 101 / 6 (+23 tests; 1 new torch test) |
+| tests passed/skipped (with CPU torch, 3.11) | n/a | 106 / 1 |
 | ruff / mypy errors (3.9-3.12) | 0 / 0 | 0 / 0 |
-| coverage (3.11 + torch) | 71% | 75% |
+| coverage (3.11 + torch) | 71% | 80% (cli.py 13% -> 41%) |
 
 ## Backlog
 
@@ -79,7 +83,9 @@ are `.env.sample` (keys only, placeholder paths) and `.envrc` (`dotenv` only) â€
 - `RandomCrop` upsizes small images bilinearly; if it is ever used on masks it needs an `interpolation` param too.
 - `DataPaletteDataset` returns `label=None` without masks, which breaks torch's default `collate_fn`; consider an empty tensor or documenting a custom collate.
 - `SegmentationPipeline.mask_pipeline` duplicates the image steps by hand; if steps become configurable, derive it via `sklearn.base.clone` + `set_params(interpolation=INTER_NEAREST)`.
-- CLI (`datapalette/cli.py`) has 13% coverage; add smoke tests for `_get_pipeline_steps` / `_process_input`.
+- CLI (`datapalette/cli.py`) is at 41% coverage; add smoke tests for `_get_pipeline_steps` / `_process_input` / `_execute_pipeline` (now easy via `main(argv)`).
+- `BrightnessContrast` default `brightness_range=(0.5, 1.5)` is used as an *additive* beta (about +1/255), i.e. effectively no brightness change; confirm intent with the owner before changing (CLI defaults mirror it).
+- CLI `--rotate` uses only `rotate_angles[0]`; the other angles are silently ignored.
 
 ## Learnings
 
@@ -107,3 +113,4 @@ are `.env.sample` (keys only, placeholder paths) and `.envrc` (`dotenv` only) â€
 - 2026-10-15 run #1 follow-up: CI `test (3.12)` was red on the mypy step (G-006, pre-existing). Fixed: targeted ignores on cv2.normalize/override, saturating `cv2.add` with an array operand; mypy 5 -> 0, ruff 0, 82 passed / 2 skipped locally.
 - 2026-10-15 run #1 follow-up 2: CI matrix reproduced locally with uv (3.9-3.12). Fixed a numpy-2.2 stub error (py3.10, color.py) and missing yaml stubs on py3.9 (added `types-PyYAML` to dev extra). mypy clean and 79 passed / 5 skipped on all four versions.
 - 2026-10-17 run #2: PR #3 CI green, no review threads; merged origin/main (no-op). Scans clean: pip-audit 0 (incl. torch/torchvision), gitleaks 0 (21 commits + tree), bandit 0 after config. Fixed 6 bugs test-first: G-008 bilinear mask interpolation in SegmentationPipeline, G-009 grayscale single-image dispatch, G-010 extract_frames silent failure / fps=0, G-011 torch adapter image/mask misalignment. Second pass: G-013 Rotate off-by-one pivot (90-degree rotation dropped a row), G-012 Rotate border_value (multiclass masks fill with ignore id 255). Tests 79 -> 93 passed (98 with torch), coverage 71% -> 75%, mypy/ruff clean on 3.9-3.12. META-REVIEW (4th Log entry): (a) new check: mask/label geometry grep (every resize/warp path reachable by masks must be INTER_NEAREST) - motivated by G-008/G-011; (b) cut false positive: bandit B101 skipped via `[tool.bandit]` in pyproject (only type-narrowing asserts, G-007 wontfix twice); (c) tightened config: tests now run with CPU torch in one venv so adapter tests stop skipping, and the matrix check (uv 3.9-3.12) is part of Checks. G-002/G-003 still need the owner (workflow scope).
+- 2026-10-17 run #2 deeper pass: fixed G-014 CLI config merge (defaults could never be overridden; now `set_defaults` + reparse, explicit flags win), G-015 CLI tiling kept only the first tile, G-016 Tile input validation, G-017 GAN video temp-dir leak. Mask-reachable paths re-audited: only SegmentationPipeline + torch adapter receive masks; GAN/diffusion/dataset-prep transforms never see masks. Tests 101 passed / 6 skipped on 3.9-3.12 (106 with torch), coverage 80%.
