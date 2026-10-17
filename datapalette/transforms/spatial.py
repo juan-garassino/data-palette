@@ -125,6 +125,10 @@ class Tile(ImageTransform):
     def _apply(self, image: np.ndarray) -> List[np.ndarray]:  # type: ignore[override]
         h, w = image.shape[:2]
         th, tw = self.tile_size
+        if th <= 0 or tw <= 0:
+            raise ValueError(f"tile_size must be positive, got {self.tile_size}")
+        if not 0.0 <= self.overlap < 1.0:
+            raise ValueError(f"overlap must be in [0, 1), got {self.overlap}")
         stride_h = max(1, int(th * (1 - self.overlap)))
         stride_w = max(1, int(tw * (1 - self.overlap)))
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import logging
 import os
-from typing import Any, List, Tuple
+from typing import Any, List, Optional, Tuple
 
 import cv2
 
@@ -168,8 +168,28 @@ def _execute_pipeline(args: argparse.Namespace, input_path: str) -> None:
         raise ValueError(f"Invalid pipeline: {args.pipeline}")
 
 
-def main() -> None:
-    """CLI entry point for DataPalette."""
+def _tile_directory(input_dir: str, output_dir: str, tile: Tile) -> List[str]:
+    """Split every image in *input_dir* into tiles, writing *all* tiles to *output_dir*."""
+    from datapalette.io.batch import IMAGE_EXTENSIONS
+
+    os.makedirs(output_dir, exist_ok=True)
+    saved: List[str] = []
+    for name in sorted(os.listdir(input_dir)):
+        if not name.lower().endswith(IMAGE_EXTENSIONS):
+            continue
+        img = cv2.imread(os.path.join(input_dir, name))
+        if img is None:
+            logger.warning("Skipping unreadable file: %s", name)
+            continue
+        stem = os.path.splitext(name)[0]
+        for k, t in enumerate(tile.transform(img)):
+            path = os.path.join(output_dir, f"{stem}_tile{k:04d}.png")
+            cv2.imwrite(path, t)
+            saved.append(path)
+    return saved
+
+
+def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="DataPalette: Image Dataset Preprocessing & Augmentation"
     )
@@ -221,15 +241,24 @@ def main() -> None:
     parser.add_argument("--edge", action="store_true")
     parser.add_argument("--green", action="store_true")
     parser.add_argument("--custom-filter", choices=["emboss", "sharpen"])
+    return parser
 
-    args = parser.parse_args()
 
-    # Merge config file (with key normalization)
+def _parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+    """Parse CLI args; a ``--config`` YAML replaces defaults, explicit flags still win."""
+    parser = _build_parser()
+    args = parser.parse_args(argv)
     if args.config:
-        config = load_config(args.config)
-        for key, value in config.items():
-            if not getattr(args, key, None):
-                setattr(args, key, value)
+        # Config values become the new defaults (keys normalized - to _), so they
+        # override argparse defaults but not flags given on the command line.
+        parser.set_defaults(**load_config(args.config))
+        args = parser.parse_args(argv)
+    return args
+
+
+def main(argv: Optional[List[str]] = None) -> None:
+    """CLI entry point for DataPalette."""
+    args = _parse_args(argv)
 
     os.makedirs(args.output_dir, exist_ok=True)
     setup_logging(os.path.join(args.output_dir, "datapalette.log"))
@@ -242,9 +271,7 @@ def main() -> None:
         if args.tile and args.pipeline != "showcase":
             tile = Tile(tile_size=tuple(args.tile_size), overlap=args.tile_overlap)
             tiled_dir = os.path.join(args.output_dir, "tiled_input")
-            process_directory(
-                input_path, tiled_dir, lambda img: tile.transform(img)[0], desc="Tiling"
-            )
+            _tile_directory(input_path, tiled_dir, tile)
             input_path = tiled_dir
 
         _execute_pipeline(args, input_path)

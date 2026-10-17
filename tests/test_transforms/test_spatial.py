@@ -163,3 +163,14 @@ class TestRotateCenter:
         out = Rotate(angle=45.0, interpolation=cv2.INTER_NEAREST, border_value=255).transform(mask)
         assert out[0, 0] == 255
         assert set(np.unique(out).tolist()) == {3, 255}
+
+
+class TestTileValidation:
+    @pytest.mark.parametrize("overlap", [-0.5, 1.0, 1.5])
+    def test_invalid_overlap_raises(self, overlap):
+        with pytest.raises(ValueError, match="overlap"):
+            Tile(tile_size=(4, 4), overlap=overlap).transform(np.zeros((8, 8), np.uint8))
+
+    def test_non_positive_tile_size_raises(self):
+        with pytest.raises(ValueError, match="tile_size"):
+            Tile(tile_size=(0, 4)).transform(np.zeros((8, 8), np.uint8))
