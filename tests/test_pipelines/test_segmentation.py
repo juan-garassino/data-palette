@@ -37,3 +37,35 @@ class TestSegmentationPipeline:
             assert False, "Should have raised ValueError"
         except ValueError as e:
             assert "masks_dir" in str(e)
+
+    def test_mask_values_preserved_through_spatial_transforms(self, tmp_path):
+        """Masks must only contain label values present in the input (nearest-neighbour).
+
+        Bilinear resize/rotate would blend e.g. class 3 and ignore-label 255 into
+        invalid ids like 129.
+        """
+        images_dir = str(tmp_path / "images")
+        masks_dir = str(tmp_path / "masks")
+        os.makedirs(images_dir)
+        os.makedirs(masks_dir)
+
+        mask = np.full((64, 64), 255, dtype=np.uint8)
+        mask[10:40, 5:30] = 3
+        mask[35:60, 25:55] = 7
+        cv2.imwrite(os.path.join(images_dir, "a.png"), np.zeros((64, 64, 3), np.uint8))
+        cv2.imwrite(os.path.join(masks_dir, "a.png"), np.dstack([mask] * 3))
+
+        pipe = SegmentationPipeline(dataset=None, mode="multiclass", size=(45, 45))
+        X, y = pipe.load_and_transform(images_dir=images_dir, masks_dir=masks_dir)
+        assert y[0].shape[:2] == (45, 45)
+        assert set(np.unique(y[0]).tolist()) <= {0, 3, 7, 255}
+
+    def test_image_pipeline_still_uses_linear_interpolation(self):
+        pipe = SegmentationPipeline(dataset=None)
+        assert pipe.sklearn_pipeline.named_steps["resize"].interpolation == cv2.INTER_LINEAR
+
+    def test_multiclass_mask_rotation_fills_with_ignore_label(self):
+        multi = SegmentationPipeline(dataset=None, mode="multiclass")
+        binary = SegmentationPipeline(dataset=None, mode="binary")
+        assert multi.mask_pipeline.named_steps["rotate"].border_value == 255
+        assert binary.mask_pipeline.named_steps["rotate"].border_value == 0

@@ -74,9 +74,10 @@ class GANPipeline(TaskPipeline):
 
             from datapalette.io.video import extract_frames
 
-            tmp = tempfile.mkdtemp()
-            extract_frames(video_path, tmp, fps=fps)
-            images = self._load_images_from_dir(tmp)
+            # Frames are loaded into memory, so the extraction dir can go right away.
+            with tempfile.TemporaryDirectory() as tmp:
+                extract_frames(video_path, tmp, fps=fps)
+                images = self._load_images_from_dir(tmp)
         elif images_dir is not None:
             images = self._load_images_from_dir(images_dir)
         else:

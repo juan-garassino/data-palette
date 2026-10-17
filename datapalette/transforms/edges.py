@@ -20,8 +20,8 @@ class GradientChannels(ImageTransform):
         magnitude = cv2.magnitude(grad_x, grad_y)
         direction = cv2.phase(grad_x, grad_y, angleInDegrees=True)
 
-        magnitude = cv2.normalize(magnitude, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-        direction = cv2.normalize(direction, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+        magnitude = cv2.normalize(magnitude, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)  # type: ignore[call-overload]
+        direction = cv2.normalize(direction, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)  # type: ignore[call-overload]
 
         return np.dstack((magnitude, direction))
 

@@ -53,3 +53,27 @@ class TestDataPaletteDataset:
         assert isinstance(image, torch.Tensor)
         assert isinstance(label, torch.Tensor)
         assert label.dtype == torch.int64
+
+
+@pytest.mark.skipif(not torch_available, reason="torch not installed")
+class TestDataPaletteDatasetMaskAlignment:
+    def test_mask_gets_same_spatial_transforms_as_image(self, tmp_path):
+        """With a SegmentationPipeline the mask must be resized/rotated like the image."""
+        from datapalette.adapters.torch import DataPaletteDataset
+        from datapalette.pipelines import SegmentationPipeline
+
+        images_dir = str(tmp_path / "images")
+        masks_dir = str(tmp_path / "masks")
+        os.makedirs(images_dir)
+        os.makedirs(masks_dir)
+        cv2.imwrite(os.path.join(images_dir, "a.png"), np.zeros((40, 60, 3), np.uint8))
+        mask = np.zeros((40, 60), np.uint8)
+        mask[:, :30] = 4
+        cv2.imwrite(os.path.join(masks_dir, "a.png"), mask)
+
+        pipe = SegmentationPipeline(dataset=None, size=(16, 16))
+        ds = DataPaletteDataset(images_dir=images_dir, pipeline=pipe, masks_dir=masks_dir)
+        image, label = ds[0]
+        assert tuple(image.shape[1:]) == (16, 16)
+        assert tuple(label.shape) == (16, 16)
+        assert set(label.unique().tolist()) <= {0, 4}

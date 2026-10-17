@@ -5,6 +5,7 @@ from typing import Any, List, Optional, Tuple
 
 import cv2
 import numpy as np
+from sklearn.pipeline import Pipeline
 
 from datapalette.pipelines.base import TaskPipeline
 from datapalette.transforms.spatial import Mirror, Resize, Rotate
@@ -45,6 +46,23 @@ class SegmentationPipeline(TaskPipeline):
         super().__init__(steps=steps, dataset=dataset)
         self.mode = mode
         self.size = size
+        # Masks hold class ids: interpolating them (bilinear) invents invalid ids at
+        # region borders, so masks go through a nearest-neighbour clone of the steps.
+        self.mask_pipeline = Pipeline(
+            [
+                ("resize", Resize(size=size, interpolation=cv2.INTER_NEAREST)),
+                (
+                    "rotate",
+                    Rotate(
+                        angle=90.0,
+                        interpolation=cv2.INTER_NEAREST,
+                        # multiclass masks use 255 as the ignore label (0 is digit "0")
+                        border_value=255 if mode == "multiclass" else 0,
+                    ),
+                ),
+                ("mirror", Mirror(mode="horizontal")),
+            ]
+        )
 
     def load_and_transform(
         self,
@@ -99,5 +117,5 @@ class SegmentationPipeline(TaskPipeline):
 
         # Apply same spatial transforms to images and masks
         X = self._transform_images(images)
-        y = self._transform_images(masks)
+        y = self.mask_pipeline.transform(masks)
         return X, y

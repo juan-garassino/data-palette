@@ -190,7 +190,7 @@ class ManySquares(ImageTransform):
         self.ratio_threshold = ratio_threshold
 
     def transform(self, X: Union[np.ndarray, List[np.ndarray]]) -> List[np.ndarray]:
-        if isinstance(X, np.ndarray) and X.ndim == 3:
+        if isinstance(X, np.ndarray) and X.ndim in (2, 3):
             return self._apply(X)
         crops: List[np.ndarray] = []
         for img in X:
@@ -250,7 +250,9 @@ class DominantColor(ImageTransform):
         self.palette = palette if palette is not None else dict(self._DEFAULT_PALETTE)
         self.n_clusters = n_clusters
 
-    def transform(self, X: Union[np.ndarray, List[np.ndarray]]) -> Union[str, List[str]]:
+    def transform(  # type: ignore[override]  # labels, not images
+        self, X: Union[np.ndarray, List[np.ndarray]]
+    ) -> Union[str, List[str]]:
         if isinstance(X, np.ndarray) and X.ndim == 3:
             return self._label(X)
         return [self._label(img) for img in X]
@@ -273,7 +275,7 @@ class DominantColor(ImageTransform):
     @staticmethod
     def _rgb_to_lab(rgb: Sequence[int]) -> np.ndarray:
         """Convert a single RGB triple to CIELAB (float, L in [0,100])."""
-        bgr = np.uint8([[[rgb[2], rgb[1], rgb[0]]]])
+        bgr = np.array([[[rgb[2], rgb[1], rgb[0]]]], dtype=np.uint8)
         lab = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB).astype(np.float64)[0, 0]
         # OpenCV packs LAB into uint8: L*255/100, a+128, b+128. Undo the scaling
         # so deltaE is computed in true CIELAB units.

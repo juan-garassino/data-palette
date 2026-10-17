@@ -21,3 +21,26 @@ class TestGANPipeline:
         sk_pipe = pipe.sklearn_pipeline
         assert sk_pipe is not None
         assert len(sk_pipe.steps) == 4
+
+
+def test_video_input_cleans_up_temp_frames(tmp_path, monkeypatch):
+    """Frames extracted from a video must not leak a temp directory per call."""
+    import tempfile
+
+    import cv2
+    import numpy as np
+
+    from datapalette.pipelines import GANPipeline
+
+    video = str(tmp_path / "v.avi")
+    writer = cv2.VideoWriter(video, cv2.VideoWriter_fourcc(*"MJPG"), 10, (32, 32))
+    for _ in range(5):
+        writer.write(np.random.randint(0, 255, (32, 32, 3), dtype=np.uint8))
+    writer.release()
+
+    scratch = tmp_path / "tmp"
+    scratch.mkdir()
+    monkeypatch.setattr(tempfile, "tempdir", str(scratch))
+    X, _ = GANPipeline(dataset=None, size=(16, 16)).load_and_transform(video_path=video, fps=10)
+    assert len(X) > 0
+    assert list(scratch.iterdir()) == []

@@ -17,15 +17,35 @@ class Rotate(ImageTransform):
     ----------
     angle : float
         Rotation angle in degrees. Default 90.
+    interpolation : int
+        OpenCV interpolation flag. Default ``cv2.INTER_LINEAR``; use
+        ``cv2.INTER_NEAREST`` for label masks so no new class ids appear.
+    border_value : int
+        Fill value for pixels the rotation leaves uncovered. Default ``0``; for
+        label masks use the ignore id (e.g. 255) so no real class is invented.
     """
 
-    def __init__(self, angle: float = 90.0):
+    def __init__(
+        self,
+        angle: float = 90.0,
+        interpolation: int = cv2.INTER_LINEAR,
+        border_value: int = 0,
+    ):
         self.angle = angle
+        self.interpolation = interpolation
+        self.border_value = border_value
 
     def _apply(self, image: np.ndarray) -> np.ndarray:
         h, w = image.shape[:2]
-        M = cv2.getRotationMatrix2D((w / 2, h / 2), self.angle, 1)
-        return cv2.warpAffine(image, M, (w, h))
+        M = cv2.getRotationMatrix2D(((w - 1) / 2, (h - 1) / 2), self.angle, 1)
+        return cv2.warpAffine(
+            image,
+            M,
+            (w, h),
+            flags=self.interpolation,
+            borderMode=cv2.BORDER_CONSTANT,
+            borderValue=self.border_value,
+        )
 
 
 class Mirror(ImageTransform):
@@ -95,7 +115,7 @@ class Tile(ImageTransform):
         self.overlap = overlap
 
     def transform(self, X: Union[np.ndarray, List[np.ndarray]]) -> List[np.ndarray]:
-        if isinstance(X, np.ndarray) and X.ndim == 3:
+        if isinstance(X, np.ndarray) and X.ndim in (2, 3):
             return self._apply(X)
         tiles: List[np.ndarray] = []
         for img in X:
@@ -105,6 +125,10 @@ class Tile(ImageTransform):
     def _apply(self, image: np.ndarray) -> List[np.ndarray]:  # type: ignore[override]
         h, w = image.shape[:2]
         th, tw = self.tile_size
+        if th <= 0 or tw <= 0:
+            raise ValueError(f"tile_size must be positive, got {self.tile_size}")
+        if not 0.0 <= self.overlap < 1.0:
+            raise ValueError(f"overlap must be in [0, 1), got {self.overlap}")
         stride_h = max(1, int(th * (1 - self.overlap)))
         stride_w = max(1, int(tw * (1 - self.overlap)))
 
@@ -122,10 +146,16 @@ class Resize(ImageTransform):
     ----------
     size : tuple[int, int]
         Target ``(height, width)``.
+    interpolation : int
+        OpenCV interpolation flag. Default ``cv2.INTER_LINEAR``; use
+        ``cv2.INTER_NEAREST`` for label masks so no new class ids appear.
     """
 
-    def __init__(self, size: Tuple[int, int] = (256, 256)):
+    def __init__(
+        self, size: Tuple[int, int] = (256, 256), interpolation: int = cv2.INTER_LINEAR
+    ):
         self.size = size
+        self.interpolation = interpolation
 
     def _apply(self, image: np.ndarray) -> np.ndarray:
-        return cv2.resize(image, (self.size[1], self.size[0]))
+        return cv2.resize(image, (self.size[1], self.size[0]), interpolation=self.interpolation)
