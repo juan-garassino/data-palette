@@ -17,15 +17,19 @@ class Rotate(ImageTransform):
     ----------
     angle : float
         Rotation angle in degrees. Default 90.
+    interpolation : int
+        OpenCV interpolation flag. Default ``cv2.INTER_LINEAR``; use
+        ``cv2.INTER_NEAREST`` for label masks so no new class ids appear.
     """
 
-    def __init__(self, angle: float = 90.0):
+    def __init__(self, angle: float = 90.0, interpolation: int = cv2.INTER_LINEAR):
         self.angle = angle
+        self.interpolation = interpolation
 
     def _apply(self, image: np.ndarray) -> np.ndarray:
         h, w = image.shape[:2]
         M = cv2.getRotationMatrix2D((w / 2, h / 2), self.angle, 1)
-        return cv2.warpAffine(image, M, (w, h))
+        return cv2.warpAffine(image, M, (w, h), flags=self.interpolation)
 
 
 class Mirror(ImageTransform):
@@ -95,7 +99,7 @@ class Tile(ImageTransform):
         self.overlap = overlap
 
     def transform(self, X: Union[np.ndarray, List[np.ndarray]]) -> List[np.ndarray]:
-        if isinstance(X, np.ndarray) and X.ndim == 3:
+        if isinstance(X, np.ndarray) and X.ndim in (2, 3):
             return self._apply(X)
         tiles: List[np.ndarray] = []
         for img in X:
@@ -122,10 +126,16 @@ class Resize(ImageTransform):
     ----------
     size : tuple[int, int]
         Target ``(height, width)``.
+    interpolation : int
+        OpenCV interpolation flag. Default ``cv2.INTER_LINEAR``; use
+        ``cv2.INTER_NEAREST`` for label masks so no new class ids appear.
     """
 
-    def __init__(self, size: Tuple[int, int] = (256, 256)):
+    def __init__(
+        self, size: Tuple[int, int] = (256, 256), interpolation: int = cv2.INTER_LINEAR
+    ):
         self.size = size
+        self.interpolation = interpolation
 
     def _apply(self, image: np.ndarray) -> np.ndarray:
-        return cv2.resize(image, (self.size[1], self.size[0]))
+        return cv2.resize(image, (self.size[1], self.size[0]), interpolation=self.interpolation)

@@ -34,8 +34,12 @@ class ImageTransform(BaseEstimator, TransformerMixin):
     def transform(
         self, X: Union[np.ndarray, List[np.ndarray]]
     ) -> Union[np.ndarray, List[np.ndarray]]:
-        """Apply the transform to a single image or list of images."""
-        if isinstance(X, np.ndarray) and X.ndim == 3:
+        """Apply the transform to a single image or list of images.
+
+        A single image is an ``HxW`` (grayscale) or ``HxWxC`` array; anything
+        else (a list, or an ``NxHxWxC`` array) is treated as a batch.
+        """
+        if isinstance(X, np.ndarray) and X.ndim in (2, 3):
             return self._apply(X)
         return [self._apply(img) for img in X]
 

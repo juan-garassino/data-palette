@@ -190,7 +190,7 @@ class ManySquares(ImageTransform):
         self.ratio_threshold = ratio_threshold
 
     def transform(self, X: Union[np.ndarray, List[np.ndarray]]) -> List[np.ndarray]:
-        if isinstance(X, np.ndarray) and X.ndim == 3:
+        if isinstance(X, np.ndarray) and X.ndim in (2, 3):
             return self._apply(X)
         crops: List[np.ndarray] = []
         for img in X:
