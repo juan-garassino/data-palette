@@ -71,6 +71,12 @@ class DataPaletteDataset:
             mask_path = os.path.join(self.masks_dir, self._image_files[idx])
             if os.path.isfile(mask_path):
                 mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+                # Keep the mask spatially aligned with the image: pipelines that
+                # define a mask_pipeline (e.g. SegmentationPipeline) apply the same
+                # geometry with nearest-neighbour interpolation.
+                mask_pipeline = getattr(self.pipeline, "mask_pipeline", None)
+                if mask is not None and mask_pipeline is not None:
+                    mask = mask_pipeline.transform(mask)
 
         # Convert to tensor
         if isinstance(image, np.ndarray):
