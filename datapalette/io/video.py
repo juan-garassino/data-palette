@@ -36,9 +36,19 @@ def extract_frames(
     -------
     int
         Number of frames saved.
+
+    Raises
+    ------
+    ValueError
+        If *fps* is not positive or the video cannot be opened.
     """
-    os.makedirs(output_dir, exist_ok=True)
+    if fps <= 0:
+        raise ValueError(f"fps must be positive, got {fps}")
     cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        cap.release()
+        raise ValueError(f"Could not open video: {video_path}")
+    os.makedirs(output_dir, exist_ok=True)
     video_fps = int(cap.get(cv2.CAP_PROP_FPS)) or 30
     frame_interval = max(1, int(video_fps / fps))
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))

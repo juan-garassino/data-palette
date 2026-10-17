@@ -4,6 +4,7 @@ import os
 
 import cv2
 import numpy as np
+import pytest
 
 from datapalette.io import extract_frames, n_croppings_from_frame
 
@@ -56,3 +57,15 @@ class TestNCroppingsFromFrame:
             assert os.path.isfile(p)
             crop = cv2.imread(p)
             assert crop.shape == (16, 16, 3)
+
+
+class TestExtractFramesValidation:
+    def test_unreadable_video_raises(self, tmp_path):
+        bogus = tmp_path / "not_a_video.mp4"
+        bogus.write_bytes(b"definitely not a video")
+        with pytest.raises(ValueError, match="open video"):
+            extract_frames(str(bogus), str(tmp_path / "out"))
+
+    def test_non_positive_fps_raises(self, tmp_path):
+        with pytest.raises(ValueError, match="fps"):
+            extract_frames(str(tmp_path / "x.mp4"), str(tmp_path / "out"), fps=0)
