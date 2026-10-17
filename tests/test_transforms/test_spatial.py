@@ -138,3 +138,28 @@ class TestInterpolation:
         mask[2:6, 3:8] = 9
         out = Rotate(angle=33.0, interpolation=cv2.INTER_NEAREST).transform(mask)
         assert set(np.unique(out).tolist()) <= {0, 9}
+
+
+class TestRotateCenter:
+    """Rotation must pivot on the pixel-grid centre ((w-1)/2, (h-1)/2).
+
+    Pivoting on (w/2, h/2) shifted a 90-degree rotation by one pixel, dropping a
+    row and filling it with 0 (a valid class id in multiclass masks).
+    """
+
+    @pytest.mark.parametrize("interp", [cv2.INTER_NEAREST, cv2.INTER_LINEAR])
+    def test_square_90_matches_rot90(self, interp):
+        img = np.arange(64, dtype=np.uint8).reshape(8, 8)
+        out = Rotate(angle=90.0, interpolation=interp).transform(img)
+        np.testing.assert_array_equal(out, np.rot90(img))
+
+    def test_square_180_matches_flip(self):
+        img = np.random.randint(0, 255, (9, 9, 3), dtype=np.uint8)
+        out = Rotate(angle=180.0).transform(img)
+        np.testing.assert_array_equal(out, img[::-1, ::-1])
+
+    def test_border_value_fills_uncovered_pixels(self):
+        mask = np.full((10, 10), 3, dtype=np.uint8)
+        out = Rotate(angle=45.0, interpolation=cv2.INTER_NEAREST, border_value=255).transform(mask)
+        assert out[0, 0] == 255
+        assert set(np.unique(out).tolist()) == {3, 255}

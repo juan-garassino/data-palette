@@ -51,7 +51,15 @@ class SegmentationPipeline(TaskPipeline):
         self.mask_pipeline = Pipeline(
             [
                 ("resize", Resize(size=size, interpolation=cv2.INTER_NEAREST)),
-                ("rotate", Rotate(angle=90.0, interpolation=cv2.INTER_NEAREST)),
+                (
+                    "rotate",
+                    Rotate(
+                        angle=90.0,
+                        interpolation=cv2.INTER_NEAREST,
+                        # multiclass masks use 255 as the ignore label (0 is digit "0")
+                        border_value=255 if mode == "multiclass" else 0,
+                    ),
+                ),
                 ("mirror", Mirror(mode="horizontal")),
             ]
         )

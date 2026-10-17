@@ -63,3 +63,9 @@ class TestSegmentationPipeline:
     def test_image_pipeline_still_uses_linear_interpolation(self):
         pipe = SegmentationPipeline(dataset=None)
         assert pipe.sklearn_pipeline.named_steps["resize"].interpolation == cv2.INTER_LINEAR
+
+    def test_multiclass_mask_rotation_fills_with_ignore_label(self):
+        multi = SegmentationPipeline(dataset=None, mode="multiclass")
+        binary = SegmentationPipeline(dataset=None, mode="binary")
+        assert multi.mask_pipeline.named_steps["rotate"].border_value == 255
+        assert binary.mask_pipeline.named_steps["rotate"].border_value == 0

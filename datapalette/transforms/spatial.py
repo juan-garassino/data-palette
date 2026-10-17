@@ -20,16 +20,32 @@ class Rotate(ImageTransform):
     interpolation : int
         OpenCV interpolation flag. Default ``cv2.INTER_LINEAR``; use
         ``cv2.INTER_NEAREST`` for label masks so no new class ids appear.
+    border_value : int
+        Fill value for pixels the rotation leaves uncovered. Default ``0``; for
+        label masks use the ignore id (e.g. 255) so no real class is invented.
     """
 
-    def __init__(self, angle: float = 90.0, interpolation: int = cv2.INTER_LINEAR):
+    def __init__(
+        self,
+        angle: float = 90.0,
+        interpolation: int = cv2.INTER_LINEAR,
+        border_value: int = 0,
+    ):
         self.angle = angle
         self.interpolation = interpolation
+        self.border_value = border_value
 
     def _apply(self, image: np.ndarray) -> np.ndarray:
         h, w = image.shape[:2]
-        M = cv2.getRotationMatrix2D((w / 2, h / 2), self.angle, 1)
-        return cv2.warpAffine(image, M, (w, h), flags=self.interpolation)
+        M = cv2.getRotationMatrix2D(((w - 1) / 2, (h - 1) / 2), self.angle, 1)
+        return cv2.warpAffine(
+            image,
+            M,
+            (w, h),
+            flags=self.interpolation,
+            borderMode=cv2.BORDER_CONSTANT,
+            borderValue=self.border_value,
+        )
 
 
 class Mirror(ImageTransform):

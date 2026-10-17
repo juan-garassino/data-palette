@@ -32,7 +32,8 @@ Automated security & bug guardian ledger for `data-palette`. Branch: `claude/gua
 | G-009 | low | bug: a single 2-D grayscale image passed to `transform` was iterated as a batch of rows | transforms/base.py, spatial.py (Tile), dataset.py (DoubleCrop) | fixed | 2026-10-17 |
 | G-010 | low | bug: `extract_frames` silently returned 0 for an unopenable video; `fps=0` -> ZeroDivisionError | datapalette/io/video.py | fixed | 2026-10-17 |
 | G-011 | medium | bug: torch `DataPaletteDataset` transformed images through the pipeline but returned masks untouched (shape/geometry mismatch) | datapalette/adapters/torch.py | fixed | 2026-10-17 |
-| G-012 | low | quality: `Rotate` border fill is 0, which is a valid class id for multiclass masks (non-90-degree angles) | transforms/spatial.py | open | 2026-10-17 |
+| G-012 | low | bug: `Rotate` border fill is 0, a valid class id for multiclass masks; `Rotate(border_value=...)` added, multiclass mask pipeline fills with ignore id 255 | transforms/spatial.py, pipelines/segmentation.py | fixed | 2026-10-17 |
+| G-013 | medium | bug: `Rotate` pivoted on (w/2, h/2) instead of the pixel-grid centre, so a 90-degree rotation shifted by 1 px, dropped a row and injected a 0 row into images and masks | transforms/spatial.py | fixed | 2026-10-17 |
 
 G-001 detail: with scikit-learn >= 1.6, `Pipeline.transform` calls `check_is_fitted`
 on the last step; stateless `ImageTransform`s had no fitted attributes, so every unfitted
@@ -59,11 +60,11 @@ are `.env.sample` (keys only, placeholder paths) and `.envrc` (`dotenv` only) â€
 
 | metric | before | after |
 |---|---|---|
-| open vulns crit/high/med/low | 0/0/0/6 (dep vulns 0, secrets 0) | 0/0/0/3 (G-002, G-003, G-012; bandit B101 now configured-out) |
-| open bugs found this run | 4 (G-008..G-011) | 0 |
+| open vulns crit/high/med/low | 0/0/0/6 (dep vulns 0, secrets 0) | 0/0/0/2 (G-002, G-003; bandit B101 now configured-out) |
+| open bugs found this run | 6 (G-008..G-013) | 0 |
 | failing tests | 0 | 0 |
-| tests passed/skipped (no torch) | 79 / 5 | 88 / 6 (+10 tests; 1 new torch test) |
-| tests passed/skipped (with CPU torch, 3.11) | n/a | 93 / 1 |
+| tests passed/skipped (no torch) | 79 / 5 | 93 / 6 (+15 tests; 1 new torch test) |
+| tests passed/skipped (with CPU torch, 3.11) | n/a | 98 / 1 |
 | ruff / mypy errors (3.9-3.12) | 0 / 0 | 0 / 0 |
 | coverage (3.11 + torch) | 71% | 75% |
 
@@ -75,7 +76,7 @@ are `.env.sample` (keys only, placeholder paths) and `.envrc` (`dotenv` only) â€
 - Core deps are unpinned (`numpy`, `opencv-python`, `scikit-learn`, ...); consider lower bounds
   (e.g. `scikit-learn>=1.3`) so behaviour changes like G-001 are caught deliberately.
 
-- G-012: let `Rotate` take a `border_value` (masks: ignore id such as 255) and use it in `SegmentationPipeline.mask_pipeline`.
+- `RandomCrop` upsizes small images bilinearly; if it is ever used on masks it needs an `interpolation` param too.
 - `DataPaletteDataset` returns `label=None` without masks, which breaks torch's default `collate_fn`; consider an empty tensor or documenting a custom collate.
 - `SegmentationPipeline.mask_pipeline` duplicates the image steps by hand; if steps become configurable, derive it via `sklearn.base.clone` + `set_params(interpolation=INTER_NEAREST)`.
 - CLI (`datapalette/cli.py`) has 13% coverage; add smoke tests for `_get_pipeline_steps` / `_process_input`.
@@ -105,4 +106,4 @@ are `.env.sample` (keys only, placeholder paths) and `.envrc` (`dotenv` only) â€
 - 2026-10-15 run #1: first run. Fixed G-001 (sklearn NotFittedError breaking 5 tests and all pipelines), G-004, G-005; G-002 fix reverted (push token lacks workflow scope); no secrets, no dependency vulns.
 - 2026-10-15 run #1 follow-up: CI `test (3.12)` was red on the mypy step (G-006, pre-existing). Fixed: targeted ignores on cv2.normalize/override, saturating `cv2.add` with an array operand; mypy 5 -> 0, ruff 0, 82 passed / 2 skipped locally.
 - 2026-10-15 run #1 follow-up 2: CI matrix reproduced locally with uv (3.9-3.12). Fixed a numpy-2.2 stub error (py3.10, color.py) and missing yaml stubs on py3.9 (added `types-PyYAML` to dev extra). mypy clean and 79 passed / 5 skipped on all four versions.
-- 2026-10-17 run #2: PR #3 CI green, no review threads; merged origin/main (no-op). Scans clean: pip-audit 0 (incl. torch/torchvision), gitleaks 0 (21 commits + tree), bandit 0 after config. Fixed 4 bugs test-first: G-008 bilinear mask interpolation in SegmentationPipeline, G-009 grayscale single-image dispatch, G-010 extract_frames silent failure / fps=0, G-011 torch adapter image/mask misalignment. Tests 79 -> 88 passed (93 with torch), coverage 71% -> 75%, mypy/ruff clean on 3.9-3.12. META-REVIEW (4th Log entry): (a) new check: mask/label geometry grep (every resize/warp path reachable by masks must be INTER_NEAREST) - motivated by G-008/G-011; (b) cut false positive: bandit B101 skipped via `[tool.bandit]` in pyproject (only type-narrowing asserts, G-007 wontfix twice); (c) tightened config: tests now run with CPU torch in one venv so adapter tests stop skipping, and the matrix check (uv 3.9-3.12) is part of Checks. G-002/G-003 still need the owner (workflow scope).
+- 2026-10-17 run #2: PR #3 CI green, no review threads; merged origin/main (no-op). Scans clean: pip-audit 0 (incl. torch/torchvision), gitleaks 0 (21 commits + tree), bandit 0 after config. Fixed 6 bugs test-first: G-008 bilinear mask interpolation in SegmentationPipeline, G-009 grayscale single-image dispatch, G-010 extract_frames silent failure / fps=0, G-011 torch adapter image/mask misalignment. Second pass: G-013 Rotate off-by-one pivot (90-degree rotation dropped a row), G-012 Rotate border_value (multiclass masks fill with ignore id 255). Tests 79 -> 93 passed (98 with torch), coverage 71% -> 75%, mypy/ruff clean on 3.9-3.12. META-REVIEW (4th Log entry): (a) new check: mask/label geometry grep (every resize/warp path reachable by masks must be INTER_NEAREST) - motivated by G-008/G-011; (b) cut false positive: bandit B101 skipped via `[tool.bandit]` in pyproject (only type-narrowing asserts, G-007 wontfix twice); (c) tightened config: tests now run with CPU torch in one venv so adapter tests stop skipping, and the matrix check (uv 3.9-3.12) is part of Checks. G-002/G-003 still need the owner (workflow scope).
