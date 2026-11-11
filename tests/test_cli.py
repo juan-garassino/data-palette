@@ -69,6 +69,14 @@ def test_apply_single_image_with_multi_output_transform(images_dir, tmp_path):
     assert len(list(out.glob("img0_*.png"))) == 6  # every tile, not just the first
 
 
+def test_showcase_saves_multichannel_steps_as_npy(images_dir, tmp_path):
+    out = tmp_path / "steps"
+    args = ["showcase", str(images_dir / "img0.png"), "-o", str(out)]
+    assert main([*args, "--step", "Mirror", "--step", "Multispectral"]) == 0
+    assert sorted(f.name for f in out.iterdir()) == ["01_mirror.png", "02_multispectral.npy"]
+    assert np.load(out / "02_multispectral.npy").shape == (40, 60, 7)
+
+
 def test_apply_with_toml_config_and_cli_override(images_dir, tmp_path):
     out = tmp_path / "cfg"
     assert main(["apply", str(images_dir), "-o", str(out), "--config", str(EXAMPLE_CONFIG)]) == 0

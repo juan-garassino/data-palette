@@ -46,6 +46,9 @@ First release on PyPI. The public API (everything exported from `datapalette`,
 - Transforms that need colour or gray input now raise a clear `ValueError` instead of crashing
   inside OpenCV; single-channel `H x W x 1` images keep their channel axis.
 - Temporary video-frame directories are cleaned up.
+- `apply`, `run` and `showcase` crashed in `cv2.imwrite` on outputs with 2 or 7 channels
+  (`GradientChannels`, `EdgeChannels`, `Multispectral`); those are now saved as `.npy`
+  (lossless, no extra dependency), 1/3/4-channel outputs keep the requested PNG/JPG format.
 
 ## [0.1.0]
 

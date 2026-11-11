@@ -95,14 +95,15 @@ def _cmd_apply(args: argparse.Namespace) -> int:
 
 
 def _cmd_showcase(args: argparse.Namespace) -> int:
+    from datapalette.io.batch import write_array
+
     image: Any = cv2.imread(args.image)
     if image is None:
         raise SystemExit(f"cannot read image: {args.image}")
     os.makedirs(args.output, exist_ok=True)
     for i, step in enumerate(_resolve_steps(args), start=1):
         image = step.transform(image)
-        path = os.path.join(args.output, f"{i:02d}_{type(step).__name__.lower()}.png")
-        cv2.imwrite(path, image)
+        path = write_array(os.path.join(args.output, f"{i:02d}_{type(step).__name__.lower()}"), image)
         logger.info("%s -> %s", step, path)
     return 0
 

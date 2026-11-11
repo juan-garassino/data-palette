@@ -151,7 +151,8 @@ datapalette run segmentation --images images/ --masks masks/ --size 256 256 -o s
 
 `--step` values are parsed with Python's `ast` and `literal_eval` (literal arguments only; nothing is
 evaluated) and override the config file's steps. Multi-output transforms such as `Tile` write
-`name_000.png`, `name_001.png`, ...
+`name_000.png`, `name_001.png`, ... Outputs that PNG/JPG cannot hold (anything other than 1, 3 or 4
+channels, e.g. `Multispectral` or `GradientChannels`) are saved losslessly as `.npy` instead.
 
 ## Transforms
 

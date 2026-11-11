@@ -7,6 +7,8 @@ import numpy as np
 import pytest
 
 from datapalette.io import load_image, process_directory, save_image
+from datapalette.io.batch import write_outputs
+from datapalette.transforms import GradientChannels, Multispectral
 
 
 class TestLoadImage:
@@ -58,3 +60,23 @@ class TestProcessDirectory:
         os.makedirs(in_dir)
         saved = process_directory(in_dir, out_dir, lambda img: img)
         assert len(saved) == 0
+
+
+class TestWriteOutputs:
+    def test_three_channel_image_is_written_in_requested_format(self, tmp_path):
+        img = np.random.randint(0, 255, (16, 20, 3), dtype=np.uint8)
+        (path,) = write_outputs(img, str(tmp_path), "rgb", "jpg")
+        assert path.endswith("rgb.jpg") and cv2.imread(path).shape == (16, 20, 3)
+
+    @pytest.mark.parametrize("transform", [Multispectral(), GradientChannels()], ids=["7ch", "2ch"])
+    def test_non_image_channel_counts_are_saved_as_npy(self, tmp_path, transform):
+        # PNG/JPG hold only 1, 3 or 4 channels; cv2.imwrite used to raise on these outputs.
+        out = transform.transform(np.random.randint(0, 255, (16, 20, 3), dtype=np.uint8))
+        (path,) = write_outputs(out, str(tmp_path), "multi", "png")
+        assert path.endswith("multi.npy")
+        np.testing.assert_array_equal(np.load(path), out)
+
+    def test_list_of_multichannel_outputs_is_numbered(self, tmp_path):
+        out = Multispectral().transform(np.zeros((8, 8, 3), dtype=np.uint8))
+        paths = write_outputs([out, out], str(tmp_path), "ms")
+        assert [os.path.basename(p) for p in paths] == ["ms_000.npy", "ms_001.npy"]

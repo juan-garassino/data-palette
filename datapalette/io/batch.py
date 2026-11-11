@@ -12,6 +12,29 @@ __all__ = ["load_image", "save_image", "process_directory"]
 logger = logging.getLogger(__name__)
 
 IMAGE_EXTENSIONS = (".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif")
+IMAGE_CHANNELS = (1, 3, 4)  # what PNG/JPG (cv2.imwrite) can hold
+
+
+def is_writable_image(image: np.ndarray) -> bool:
+    """True if ``image`` has 1, 3 or 4 channels and can be written as PNG/JPG."""
+    channels = 1 if image.ndim == 2 else image.shape[2]
+    return channels in IMAGE_CHANNELS
+
+
+def write_array(path_stem: str, image: np.ndarray, output_format: str = "png") -> str:
+    """Write ``image`` to ``path_stem.<output_format>``, or to ``path_stem.npy`` when it is not an image.
+
+    Multi-channel outputs such as ``Multispectral`` (7 channels) or ``GradientChannels`` (2 channels)
+    cannot be stored as PNG/JPG; they are saved losslessly with :func:`numpy.save` instead.
+    """
+    if not is_writable_image(image):
+        path = f"{path_stem}.npy"
+        np.save(path, image)
+        return path
+    path = f"{path_stem}.{output_format}"
+    if not cv2.imwrite(path, image):
+        raise OSError(f"OpenCV could not write {path}")
+    return path
 
 
 def list_images(directory: str) -> List[str]:
@@ -101,7 +124,10 @@ def write_outputs(
     stem: str,
     output_format: str = "png",
 ) -> List[str]:
-    """Write one image, or a list of images with numbered suffixes, and return the paths."""
+    """Write one image, or a list of images with numbered suffixes, and return the paths.
+
+    Outputs with a channel count PNG/JPG cannot hold (not 1, 3 or 4) are saved as ``.npy``.
+    """
     if isinstance(result, np.ndarray):
         items, names = [result], [stem]
     elif isinstance(result, list) and all(isinstance(r, np.ndarray) for r in result):
@@ -111,7 +137,5 @@ def write_outputs(
     os.makedirs(output_dir, exist_ok=True)
     paths = []
     for image, name in zip(items, names):
-        out = os.path.join(output_dir, f"{name}.{output_format}")
-        cv2.imwrite(out, image)
-        paths.append(out)
+        paths.append(write_array(os.path.join(output_dir, name), image, output_format))
     return paths
