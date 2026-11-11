@@ -74,6 +74,24 @@ class TestTile:
         # stride = 25, so (100-50)//25 + 1 = 3 steps each dim -> 9 tiles
         assert len(tiles) > 4
 
+    def test_covers_right_and_bottom_edges(self):
+        # 110 wide / 75 high with 50x50 tiles: the stride grid stops at x=50 and y=0, so the
+        # last 10 columns and 25 rows used to be dropped. A final edge-aligned tile covers them.
+        img = np.arange(75 * 110 * 3, dtype=np.uint32).reshape(75, 110, 3)
+        tiles = Tile(tile_size=(50, 50)).transform(img)
+        assert len(tiles) == 6  # rows y=0,25 x columns x=0,50,60
+        assert all(t.shape == (50, 50, 3) for t in tiles)
+        np.testing.assert_array_equal(tiles[-1], img[25:75, 60:110])
+        covered = np.zeros((75, 110), dtype=bool)
+        for t in tiles:
+            y, x = np.argwhere((img[:, :, 0] == t[0, 0, 0]))[0]
+            covered[y : y + 50, x : x + 50] = True
+        assert covered.all()
+
+    def test_no_duplicate_tile_when_grid_already_reaches_edge(self):
+        img = np.zeros((100, 100, 3), dtype=np.uint8)
+        assert len(Tile(tile_size=(50, 50), overlap=0.5).transform(img)) == 9
+
 
 class TestResize:
     def test_output_shape(self, sample_image):

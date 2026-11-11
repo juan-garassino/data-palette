@@ -106,7 +106,10 @@ class RandomCrop(ImageTransform):
 class Tile(MultiOutputTransform):
     """Split an image into overlapping tiles.
 
-    ``transform`` always returns a *list* of tiles (even for a single image).
+    ``transform`` always returns a *list* of tiles (even for a single image). When the stride grid
+    does not end exactly on the right/bottom edge, a final edge-aligned row/column of tiles is added
+    (it overlaps its neighbour more), so every pixel is covered. Images smaller than ``tile_size``
+    yield no tiles.
 
     Parameters
     ----------
@@ -126,11 +129,16 @@ class Tile(MultiOutputTransform):
         stride_h = max(1, int(th * (1 - self.overlap)))
         stride_w = max(1, int(tw * (1 - self.overlap)))
 
-        tiles: List[np.ndarray] = []
-        for y in range(0, h - th + 1, stride_h):
-            for x in range(0, w - tw + 1, stride_w):
-                tiles.append(image[y : y + th, x : x + tw])
-        return tiles
+        xs = _starts(w, tw, stride_w)
+        return [image[y : y + th, x : x + tw] for y in _starts(h, th, stride_h) for x in xs]
+
+
+def _starts(length: int, size: int, stride: int) -> List[int]:
+    """Tile offsets along one axis, plus a final edge-aligned offset so the far edge is covered."""
+    starts = list(range(0, length - size + 1, stride))
+    if starts and starts[-1] != length - size:
+        starts.append(length - size)
+    return starts
 
 
 class Resize(ImageTransform):

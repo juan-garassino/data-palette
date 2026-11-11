@@ -49,6 +49,8 @@ First release on PyPI. The public API (everything exported from `datapalette`,
 - `apply`, `run` and `showcase` crashed in `cv2.imwrite` on outputs with 2 or 7 channels
   (`GradientChannels`, `EdgeChannels`, `Multispectral`); those are now saved as `.npy`
   (lossless, no extra dependency), 1/3/4-channel outputs keep the requested PNG/JPG format.
+- `Tile` dropped the right/bottom strip whenever the stride grid did not end on the image edge;
+  it now adds a final edge-aligned row/column of tiles so every pixel is covered.
 
 ## [0.1.0]
 

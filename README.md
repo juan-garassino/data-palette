@@ -161,7 +161,7 @@ channels, e.g. `Multispectral` or `GradientChannels`) are saved losslessly as `.
 | `Rotate` | `spatial` | `angle=90.0`, `expand=False`, `interpolation="linear"` |
 | `Mirror` | `spatial` | `mode="horizontal"` (`horizontal`, `vertical`, `both`) |
 | `RandomCrop` | `spatial` | `crop_size=(224, 224)`, `random_state=None` |
-| `Tile` | `spatial` | `tile_size=(256, 256)`, `overlap=0.0` — returns a list |
+| `Tile` | `spatial` | `tile_size=(256, 256)`, `overlap=0.0` — returns a list; edge-aligned last row/column |
 | `Resize` | `spatial` | `size=(256, 256)`, `interpolation="linear"` (`nearest`, `linear`, `cubic`, `area`) |
 | `PCAColorAugmentation` | `color` | `alpha_std=0.1`, `random_state=None` — `fit` on a dataset for AlexNet-style stats |
 | `ConvertColorSpace` | `color` | `target="hsv"` (`hsv`, `lab`, `gray`) |
