@@ -14,6 +14,14 @@ with trusted publishing, README examples executed in CI. See [CHANGELOG.md](CHAN
   train/val/test splitting, Hugging Face Datasets as an alternative to torchvision.
 - **Performance**: vectorized batch transforms, multiprocessing in `process_directory`.
 - **Docs**: API reference site; benchmarks against albumentations and torchvision.transforms.v2.
+- **Showcase previews**: alongside the lossless `.npy` of a multi-channel step, save a false-colour
+  PNG of its new channels so the step can be eyeballed.
+- **Split manifests**: export train/val/test file lists (CSV/JSON) that PyTorch/TF loaders can read.
+
+### Parked ideas (earlier chats)
+
+- YAML pipeline configs with a `mode: showcase|full` key — superseded by TOML `[[steps]]` tables and
+  the `showcase` / `apply` subcommands.
 
 ## Direction
 
